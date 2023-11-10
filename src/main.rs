@@ -10,8 +10,12 @@ fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
     streamer::stream(
-        1920,
-        1080,
+        // 1920,
+        // 1080,
+        // 1280,
+        // 720,
+        640,
+        480,
         25,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
     );

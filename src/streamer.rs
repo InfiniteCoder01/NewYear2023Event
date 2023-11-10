@@ -35,35 +35,29 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     pipeline.play();
 
     thread::spawn(move || {
-        let condvar = Condvar::new();
-        let mutex = Mutex::new(());
-        // let mut gray = 0;
-
-        if let Some(mut buffer) = bufferpool.acquire_buffer() {
-            buffer
-                .map_write(|mapping| {
-                    for c in mapping.iter_mut::<u8>() {
-                        *c = 127;
-                    }
-                })
-                .unwrap();
-        }
+        // let condvar = Condvar::new();
+        // let mutex = Mutex::new(());
+        let mut gray = 0;
         loop {
-            if let Some(buffer) = bufferpool.acquire_buffer() {
-                // buffer
-                //     .map_write(|mapping| {
-                //         for c in mapping.iter_mut::<u8>() {
-                //             *c = gray;
-                //         }
-                //     })
-                //     .ok();
-                // gray += 1;
-                // gray %= 255;
-                appsrc.push_buffer(buffer);
-                let guard = mutex.lock().unwrap();
-                condvar
-                    .wait_timeout(guard, Duration::from_millis((1000 / fps) as _))
+            if let Some(mut buffer) = bufferpool.acquire_buffer() {
+                buffer
+                    .map_write(|mapping| {
+                        for rgb in mapping.data_mut().chunks_mut(3) {
+                            if let [r, g, b] = rgb {
+                                *r = gray;
+                                *g = 0;
+                                *b = 255;
+                            }
+                        }
+                    })
                     .ok();
+                gray += 1;
+                gray %= 255;
+                appsrc.push_buffer(buffer);
+                // let guard = mutex.lock().unwrap();
+                // condvar
+                //     .wait_timeout(guard, Duration::from_millis((1000 / fps) as _))
+                //     .ok();
             } else {
                 println!("Couldn't get buffer, sending EOS and finishing thread");
                 appsrc.end_of_stream();

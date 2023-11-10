@@ -12,11 +12,11 @@ fn main() {
     streamer::stream(
         // 1920,
         // 1080,
-        1280,
-        720,
-        // 640,
-        // 480,
-        25,
+        // 1280,
+        // 720,
+        854,
+        480,
+        20,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
     );
 }

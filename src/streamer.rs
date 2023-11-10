@@ -62,7 +62,6 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
         }
     });
 
-    #[cfg(feature = "logging")]
     for message in pipeline.bus().unwrap().receiver().iter() {
         match message.parse() {
             gst::Message::StateChangedParsed {

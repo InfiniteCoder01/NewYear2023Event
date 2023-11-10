@@ -3,10 +3,6 @@ name = "new-year-2024"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-logging = []
-default = ["logging"]
-
 [dependencies]
 gstreamer = { git = "https://github.com/arturoc/gstreamer1.0-rs/" }
 serde = { version = "1.0.190", features = ["derive"] }

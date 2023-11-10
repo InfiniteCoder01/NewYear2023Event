@@ -42,11 +42,12 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
             if let Some(mut buffer) = bufferpool.acquire_buffer() {
                 buffer
                     .map_write(|mapping| {
-                        for rgb in mapping.data_mut().chunks_mut(3) {
-                            if let [r, g, b] = rgb {
+                        for (y, row) in mapping.data_mut::<[u8; 3]>().chunks_mut(width).enumerate()
+                        {
+                            for (x, [r, g, b]) in row.iter_mut().enumerate() {
                                 *r = gray;
-                                *g = 0;
-                                *b = 255;
+                                *g = (x * 255 / width) as _;
+                                *b = (y * 255 / height) as _;
                             }
                         }
                     })

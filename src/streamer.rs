@@ -27,7 +27,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     let mut appsrc = gst::AppSrc::new_from_element(appsrc);
     let mut bufferpool = gst::BufferPool::new().unwrap();
     let appsrc_caps = appsrc.caps().unwrap();
-    bufferpool.set_params(&appsrc_caps, (width * height * 3) as _, 0, 0);
+    bufferpool.set_params(&appsrc_caps, (width * height * 3) as _, 3, 3);
     if bufferpool.set_active(true).is_err() {
         panic!("Couldn't activate buffer pool");
     }
@@ -37,18 +37,28 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     thread::spawn(move || {
         let condvar = Condvar::new();
         let mutex = Mutex::new(());
-        let mut gray = 0;
+        // let mut gray = 0;
+
+        if let Some(mut buffer) = bufferpool.acquire_buffer() {
+            buffer
+                .map_write(|mapping| {
+                    for c in mapping.iter_mut::<u8>() {
+                        *c = 127;
+                    }
+                })
+                .unwrap();
+        }
         loop {
-            if let Some(mut buffer) = bufferpool.acquire_buffer() {
-                buffer
-                    .map_write(|mapping| {
-                        for c in mapping.iter_mut::<u8>() {
-                            *c = gray;
-                        }
-                    })
-                    .ok();
-                gray += 1;
-                gray %= 255;
+            if let Some(buffer) = bufferpool.acquire_buffer() {
+                // buffer
+                //     .map_write(|mapping| {
+                //         for c in mapping.iter_mut::<u8>() {
+                //             *c = gray;
+                //         }
+                //     })
+                //     .ok();
+                // gray += 1;
+                // gray %= 255;
                 appsrc.push_buffer(buffer);
                 let guard = mutex.lock().unwrap();
                 condvar

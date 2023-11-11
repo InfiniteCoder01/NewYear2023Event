@@ -27,7 +27,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     let mut appsrc = gst::AppSrc::new_from_element(appsrc);
     let mut bufferpool = gst::BufferPool::new().unwrap();
     let appsrc_caps = appsrc.caps().unwrap();
-    bufferpool.set_params(&appsrc_caps, (width * height * 3) as _, 3, 3);
+    bufferpool.set_params(&appsrc_caps, (width * height * 3) as _, 1, 10);
     if bufferpool.set_active(true).is_err() {
         panic!("Couldn't activate buffer pool");
     }

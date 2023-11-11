@@ -43,7 +43,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                 let start = std::time::Instant::now();
                 buffer
                     .map_write(|mapping| {
-                        for (y, row) in mapping.data_mut::<u8>().chunks_mut(width * 3).enumerate() {
+                        for (y, row) in mapping.data_mut::<u8>().chunks_exact_mut(width * 3).enumerate() {
                             for (x, rgb) in row.chunks_exact_mut(3).enumerate() {
                                 if let [r, g, b] = rgb {
                                     *r = gray;

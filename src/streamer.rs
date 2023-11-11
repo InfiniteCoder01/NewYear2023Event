@@ -35,11 +35,12 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     pipeline.play();
 
     thread::spawn(move || {
-        // let condvar = Condvar::new();
-        // let mutex = Mutex::new(());
         let mut gray = 0;
         loop {
+            let start = std::time::Instant::now();
             if let Some(mut buffer) = bufferpool.acquire_buffer() {
+                println!("Time acquiring: {}ms", start.elapsed().as_millis());
+                let start = std::time::Instant::now();
                 buffer
                     .map_write(|mapping| {
                         for (y, row) in mapping.data_mut::<[u8; 3]>().chunks_mut(width).enumerate()
@@ -52,13 +53,12 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                         }
                     })
                     .ok();
+                println!("Time drawing: {}ms", start.elapsed().as_millis());
                 gray += 1;
                 gray %= 255;
+                let start = std::time::Instant::now();
                 appsrc.push_buffer(buffer);
-                // let guard = mutex.lock().unwrap();
-                // condvar
-                //     .wait_timeout(guard, Duration::from_millis((1000 / fps) as _))
-                //     .ok();
+                println!("Time pushing: {}ms", start.elapsed().as_millis());
             } else {
                 println!("Couldn't get buffer, sending EOS and finishing thread");
                 appsrc.end_of_stream();

@@ -46,7 +46,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                         for (y, row) in mapping.data_mut::<[u8; 3]>().chunks_mut(width).enumerate()
                         {
                             for (x, [r, g, b]) in row.iter_mut().enumerate() {
-                                dbg!(x, y);
+                                dbg!(gray, (x * 255 / width) as u8, (y * 255 / height) as u8);
                                 *r = gray;
                                 *g = (x * 255 / width) as _;
                                 *b = (y * 255 / height) as _;

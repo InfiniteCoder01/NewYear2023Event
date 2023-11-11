@@ -36,11 +36,14 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
 
     thread::spawn(move || {
         let mut gray = 0;
+        let condvar = Condvar::new();
+        let mutex = Mutex::new(());
         loop {
-            let start = std::time::Instant::now();
+            let frame_start = std::time::Instant::now();
+            let __Profiler = std::time::Instant::now();
             if let Some(mut buffer) = bufferpool.acquire_buffer() {
-                println!("Time acquiring: {}ms", start.elapsed().as_millis());
-                let start = std::time::Instant::now();
+                println!("Time acquiring: {}ms", __Profiler.elapsed().as_millis());
+                let __Profiler = std::time::Instant::now();
                 buffer
                     .map_write(|mapping| {
                         for (i, rgb) in mapping.data_mut::<u8>().chunks_exact_mut(3).enumerate() {
@@ -50,17 +53,24 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                         }
                     })
                     .ok();
-                println!("Time drawing: {}ms", start.elapsed().as_millis());
+                println!("Time drawing: {}ms", __Profiler.elapsed().as_millis());
                 gray += 1;
                 gray %= 255;
-                let start = std::time::Instant::now();
+                let __Profiler = std::time::Instant::now();
                 appsrc.push_buffer(buffer);
-                println!("Time pushing: {}ms", start.elapsed().as_millis());
+                println!("Time pushing: {}ms", __Profiler.elapsed().as_millis());
             } else {
                 println!("Couldn't get buffer, sending EOS and finishing thread");
                 appsrc.end_of_stream();
                 break;
             }
+            let guard = mutex.lock().unwrap();
+            condvar
+                .wait_timeout(
+                    guard,
+                    Duration::from_millis((1000 / fps) as _).saturating_sub(frame_start.elapsed()),
+                )
+                .ok();
         }
     });
 

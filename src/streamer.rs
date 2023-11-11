@@ -68,7 +68,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
             condvar
                 .wait_timeout(
                     guard,
-                    Duration::from_millis((1000 / fps) as _).saturating_sub(frame_start.elapsed()),
+                    Duration::from_millis((1000 / fps) as _).saturating_sub(frame_start.elapsed()).max(Duration::from_millis(5)),
                 )
                 .ok();
         }

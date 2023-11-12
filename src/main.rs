@@ -11,10 +11,10 @@ fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
     streamer::stream(
-        1920,
-        1080,
-        // 1280,
-        // 720,
+        // 1920,
+        // 1080,
+        1280,
+        720,
         // 854,
         // 480,
         30,

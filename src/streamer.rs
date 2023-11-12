@@ -2,8 +2,8 @@ extern crate gstreamer as gst;
 extern crate gstreamer_app as gst_app;
 extern crate gstreamer_video as gst_video;
 
+use crate::renderer::*;
 use gst::{prelude::*, Caps, ElementFactory};
-use rayon::{prelude::ParallelIterator, slice::ParallelSliceMut};
 
 pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     // let pipeline_str = format!(
@@ -102,56 +102,33 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     // * Link audio
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
-    let mut i = 0;
+    let mut frame_index = 0;
     video_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |appsrc, _| {
-                // We only produce 1000 frames
-                if i == 65535 {
-                    let _ = appsrc.end_of_stream();
-                    return;
-                }
+                let frame_start = std::time::Instant::now(); // ! Profiling
 
-                println!("Producing frame {i}");
-
-                let r = (i % 255) as u8;
-                let g = (i % 255) as u8;
-                let b = (i % 255) as u8;
-
-                let PROFFILE = std::time::Instant::now();
                 let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
-                {
-                    let buffer = buffer.get_mut().unwrap();
-                    // let mut vframe =
-                    //     gst_video::VideoFrameRef::from_buffer_ref_writable(buffer, &video_info)
-                    //         .unwrap();
+                let time_to_render = {
+                    let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
+                    let mut frame =
+                        crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
-                    // let width = vframe.width() as usize;
-                    // let height = vframe.height() as usize;
+                    let render_start = std::time::Instant::now(); // ! Profiling
 
-                    // let stride = vframe.plane_stride()[0] as usize;
+                    frame.fill_rect(0, 0, frame.width, frame.height, Color::RED);
 
-                    println!("Buffer setup took {}ms!", PROFFILE.elapsed().as_millis());
+                    render_start.elapsed()
+                };
 
-                    let PROFILE = std::time::Instant::now();
-                    buffer
-                        .map_writable()
-                        .unwrap()
-                        .as_mut_slice()
-                        .par_chunks_exact_mut(3)
-                        .for_each(|pixel| {
-                            pixel[0] = r;
-                            pixel[1] = g;
-                            pixel[2] = b;
-                        });
-                    println!("Drawing took {}ms!", PROFILE.elapsed().as_millis());
-                }
-
-                i += 1;
-
-                let PROFILE = std::time::Instant::now();
                 appsrc.push_buffer(buffer).unwrap();
-                println!("Pushing buffer took {}ms!", PROFILE.elapsed().as_millis());
+
+                println!(
+                    "Frame {frame_index} completed in {}ms (rendering took {}ms)",
+                    frame_start.elapsed().as_millis(),
+                    time_to_render.as_millis(),
+                );
+                frame_index += 1;
             })
             .build(),
     );

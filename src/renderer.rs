@@ -1,7 +1,4 @@
-use rayon::{
-    prelude::{IntoParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::{prelude::*, slice::ParallelSliceMut};
 
 pub struct Color {
     pub r: u8,
@@ -24,9 +21,9 @@ impl Color {
     }
 
     pub const fn from_rgb(rgb: u32) -> Self {
-        let r = (rgb >> 16) & 0xFF;
-        let g = (rgb >> 8) & 0xFF;
-        let b = rgb & 0xFF;
+        let r = (rgb >> 16) & 0xff;
+        let g = (rgb >> 8) & 0xff;
+        let b = rgb & 0xff;
         Self::new(r as _, g as _, b as _)
     }
 
@@ -77,7 +74,8 @@ impl<'a> Frame<'a> {
     pub fn fill_rect(&mut self, x: i32, y: i32, width: usize, height: usize, color: Color) {
         let (x, y) = (x.max(0) as usize, y.max(0) as usize);
         for y in y.min(self.height - 1)..(y + height).min(self.height) {
-            self.buffer[y * self.width + x..y * self.width + x + width]
+            let index = y * self.width + x;
+            self.buffer[index * 3..(index + width) * 3]
                 .par_chunks_exact_mut(3)
                 .for_each(|pixel| {
                     pixel[0] = color.r;

@@ -116,8 +116,8 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
 
                     let render_start = std::time::Instant::now(); // ! Profiling
 
-                    frame.clear(Color::grayscale((frame_index % 255) as _));
-                    // frame.fill_rect(0, 0, frame.width, frame.height, Color::RED);
+                    // frame.clear(Color::grayscale((frame_index % 255) as _));
+                    frame.fill_rect(0, 0, frame.width, frame.height, Color::new(255, (frame_index % 255) as _, 0));
 
                     render_start.elapsed()
                 };

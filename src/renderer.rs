@@ -73,15 +73,29 @@ impl<'a> Frame<'a> {
 
     pub fn fill_rect(&mut self, x: i32, y: i32, width: usize, height: usize, color: Color) {
         let (x, y) = (x.max(0) as usize, y.max(0) as usize);
-        for y in y.min(self.height - 1)..(y + height).min(self.height) {
-            let index = y * self.width + x;
-            self.buffer[index * 3..(index + width) * 3]
-                .par_chunks_exact_mut(3)
-                .for_each(|pixel| {
-                    pixel[0] = color.r;
-                    pixel[1] = color.g;
-                    pixel[2] = color.b;
-                });
-        }
+        let x = x.min(self.width - 1);
+
+        #[derive(Clone)]
+        struct ThreadPtr<T>(*mut T);
+        unsafe impl<T> Send for ThreadPtr<T> {}
+        unsafe impl<T> Sync for ThreadPtr<T> {}
+
+        let buffer = ThreadPtr(self.buffer.as_mut_ptr());
+
+        (y.min(self.height - 1)..(y + height).min(self.height))
+            .into_par_iter()
+            .for_each(|y| {
+                let index = y * self.width + x;
+                let row = unsafe {
+                    std::slice::from_raw_parts_mut(buffer.clone().0, width.min(self.width - x))
+                };
+                row[index * 3..(index + width) * 3]
+                    .par_chunks_exact_mut(3)
+                    .for_each(|pixel| {
+                        pixel[0] = color.r;
+                        pixel[1] = color.g;
+                        pixel[2] = color.b;
+                    });
+            });
     }
 }

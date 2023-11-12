@@ -87,7 +87,7 @@ impl<'a> Frame<'a> {
             .for_each(|y| {
                 let index = y * self.width + x;
                 let row = unsafe {
-                    std::slice::from_raw_parts_mut(buffer.clone().0, width.min(self.width - x))
+                    std::slice::from_raw_parts_mut(buffer.clone().0, width.min(self.width - x) * 3)
                 };
                 row[index * 3..(index + width) * 3]
                     .par_chunks_exact_mut(3)

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gstreamer = { git = "https://github.com/arturoc/gstreamer1.0-rs/" }
+gstreamer = "0.21.2"
+gstreamer-app = "0.21.2"
+gstreamer-video = "0.21.2"
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"

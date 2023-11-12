@@ -1,116 +1,171 @@
-extern crate gst;
+extern crate gstreamer as gst;
+extern crate gstreamer_app as gst_app;
+extern crate gstreamer_video as gst_video;
 
-use std::sync::{Condvar, Mutex};
-use std::thread;
-use std::time::Duration;
+use gst::{prelude::*, Caps, ElementFactory};
 
 pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
-    gst::init();
-    let pipeline_str = format!(
-        concat!(
-            "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-            "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
-            "queue ! x264enc ! h264parse ! ",
-            "flvmux streamable=true name=mux ! ",
-            "rtmpsink location={} ",
-            "audiotestsrc ! voaacenc bitrate=128000 ! mux."
-        ),
-        width, height, fps,
-        width, height, fps,
-        rtmp_uri
-    );
-    let mut pipeline = gst::Pipeline::new_from_str(&pipeline_str).unwrap();
-    let mut mainloop = gst::MainLoop::new();
-    let appsrc = pipeline
-        .get_by_name("appsrc0")
-        .expect("Couldn't get appsrc from pipeline");
-    let mut appsrc = gst::AppSrc::new_from_element(appsrc);
-    let mut bufferpool = gst::BufferPool::new().unwrap();
-    let appsrc_caps = appsrc.caps().unwrap();
-    bufferpool.set_params(&appsrc_caps, (width * height * 3) as _, 0, 0);
-    if bufferpool.set_active(true).is_err() {
-        panic!("Couldn't activate buffer pool");
-    }
-    mainloop.spawn();
-    pipeline.play();
+    // let pipeline_str = format!(
+    //     concat!(
+    //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
+    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "x264enc ! h264parse ! queue ! ",
+    //         "flvmux streamable=true name=mux ! ",
+    //         "rtmpsink location={} ",
+    //         "audiotestsrc ! voaacenc bitrate=128000 ! mux."
+    //     ),
+    //     width, height, fps,
+    //     width, height, fps,
+    //     rtmp_uri
+    // );
 
-    thread::spawn(move || {
-        let mut gray = 0;
-        let condvar = Condvar::new();
-        let mutex = Mutex::new(());
-        loop {
-            let frame_start = std::time::Instant::now();
-            let __Profiler = std::time::Instant::now();
-            if let Some(mut buffer) = bufferpool.acquire_buffer() {
-                println!("Time acquiring: {}ms", __Profiler.elapsed().as_millis());
-                let __Profiler = std::time::Instant::now();
-                buffer
-                    .map_write(|mapping| {
-                        for (i, rgb) in mapping.data_mut::<u8>().chunks_exact_mut(3).enumerate() {
-                            *unsafe { rgb.get_unchecked_mut(0) } = gray;
-                            *unsafe { rgb.get_unchecked_mut(1) } = (i * 255 / width) as _;
-                            *unsafe { rgb.get_unchecked_mut(1) } = 0;
+    gst::init().unwrap();
+    let pipeline = gst::Pipeline::default();
+
+    // * Source
+    let video_info =
+        gst_video::VideoInfo::builder(gst_video::VideoFormat::Bgrx, width as u32, height as u32)
+            .fps(gst::Fraction::new(fps as _, 1))
+            .build()
+            .unwrap();
+    let video_source = gst_app::AppSrc::builder()
+        .caps(&video_info.to_caps().unwrap())
+        .is_live(true)
+        .format(gst::Format::Time)
+        .build();
+
+    // * Convert
+    let videoconvert = ElementFactory::make("videoconvert").build().unwrap();
+    let caps_filter = ElementFactory::make("capsfilter")
+        .property(
+            "caps",
+            Caps::builder("video/x-raw").field("format", "I420").build(),
+        )
+        .build()
+        .unwrap();
+    let video_encoder = ElementFactory::make("x264enc").build().unwrap();
+    let video_decoder = ElementFactory::make("h264parse").build().unwrap();
+
+    // * Mux
+    let mux = ElementFactory::make("flvmux")
+        .property("streamable", true)
+        .build()
+        .unwrap();
+
+    // * Sink
+    let rtmp_sink = ElementFactory::make("rtmpsink")
+        .property("location", rtmp_uri)
+        .build()
+        .unwrap();
+
+    // * Audio
+    let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
+    let audio_encoder = ElementFactory::make("voaacenc")
+        .property("bitrate", 128000)
+        .build()
+        .unwrap();
+
+    // * Add
+    pipeline
+        .add_many([
+            video_source.upcast_ref(),
+            &videoconvert,
+            &caps_filter,
+            &video_encoder,
+            &video_decoder,
+            &mux,
+            &rtmp_sink,
+            &audio_source,
+            &audio_encoder,
+        ])
+        .unwrap();
+
+    // * Link video
+    gst::Element::link_many([
+        video_source.upcast_ref(),
+        &videoconvert,
+        &caps_filter,
+        &video_encoder,
+        &video_decoder,
+        &mux,
+        &rtmp_sink,
+    ])
+    .unwrap();
+
+    // * Link audio
+    gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
+
+    let mut i = 0;
+    video_source.set_callbacks(
+        gst_app::AppSrcCallbacks::builder()
+            .need_data(move |appsrc, _| {
+                // We only produce 1000 frames
+                if i == 65535 {
+                    let _ = appsrc.end_of_stream();
+                    return;
+                }
+
+                println!("Producing frame {i}");
+
+                let r = (i % 255) as u8;
+                let g = (i % 255) as u8;
+                let b = (i % 255) as u8;
+
+                let PROFFILE = std::time::Instant::now();
+                let mut buffer = gst::Buffer::with_size(width * height * 4).unwrap();
+                {
+                    let buffer = buffer.get_mut().unwrap();
+                    let mut vframe =
+                        gst_video::VideoFrameRef::from_buffer_ref_writable(buffer, &video_info)
+                            .unwrap();
+
+                    let width = vframe.width() as usize;
+                    let height = vframe.height() as usize;
+
+                    let stride = vframe.plane_stride()[0] as usize;
+
+                    println!("Buffer setup took {}ms!", PROFFILE.elapsed().as_millis());
+                    
+                    let PROFILE = std::time::Instant::now();
+                    for line in vframe
+                        .plane_data_mut(0)
+                        .unwrap()
+                        .chunks_exact_mut(stride)
+                        .take(height)
+                    {
+                        // Iterate over each pixel of 4 bytes in that line
+                        for pixel in line[..(4 * width)].chunks_exact_mut(4) {
+                            pixel[0] = r;
+                            pixel[1] = g;
+                            pixel[2] = b;
+                            pixel[3] = 1;
                         }
-                    })
-                    .ok();
-                println!("Time drawing: {}ms", __Profiler.elapsed().as_millis());
-                gray += 1;
-                gray %= 255;
-                let __Profiler = std::time::Instant::now();
-                appsrc.push_buffer(buffer);
-                println!("Time pushing: {}ms", __Profiler.elapsed().as_millis());
-            } else {
-                println!("Couldn't get buffer, sending EOS and finishing thread");
-                appsrc.end_of_stream();
-                break;
-            }
-            let guard = mutex.lock().unwrap();
-            condvar
-                .wait_timeout(
-                    guard,
-                    Duration::from_millis((1000 / fps) as _).saturating_sub(frame_start.elapsed()).max(Duration::from_millis(5)),
-                )
-                .ok();
-        }
-    });
+                    }
+                    println!("Drawing took {}ms!", PROFILE.elapsed().as_millis());
+                }
 
-    for _message in pipeline.bus().unwrap().receiver().iter() {
-        // match message.parse() {
-        //     gst::Message::StateChangedParsed {
-        //         ref old, ref new, ..
-        //     } => {
-        //         println!(
-        //             "element `{}` changed from {:?} to {:?}",
-        //             message.src_name(),
-        //             old,
-        //             new
-        //         );
-        //     }
-        //     gst::Message::ErrorParsed {
-        //         ref error,
-        //         ref debug,
-        //         ..
-        //     } => {
-        //         println!(
-        //             "error msg from element `{}`: {}, {}. Quitting",
-        //             message.src_name(),
-        //             error.message(),
-        //             debug
-        //         );
-        //         break;
-        //     }
-        //     gst::Message::Eos(_) => {
-        //         println!("eos received quiting");
-        //         break;
-        //     }
-        //     _ => {
-        //         println!(
-        //             "msg of type `{}` from element `{}`",
-        //             message.type_name(),
-        //             message.src_name()
-        //         );
-        //     }
-        // }
+                i += 1;
+
+                let PROFILE = std::time::Instant::now();
+                appsrc.push_buffer(buffer).unwrap();
+                println!("Pushing buffer took {}ms!", PROFILE.elapsed().as_millis());
+            })
+            .build(),
+    );
+
+    pipeline.set_state(gst::State::Playing).unwrap();
+
+    for msg in pipeline.bus().unwrap().iter_timed(gst::ClockTime::NONE) {
+        use gst::MessageView;
+
+        match msg.view() {
+            MessageView::Eos(..) => break,
+            MessageView::Error(err) => {
+                panic!("{}", err.error());
+            }
+            _ => (),
+        }
     }
-    mainloop.quit();
+
+    pipeline.set_state(gst::State::Null).unwrap();
 }

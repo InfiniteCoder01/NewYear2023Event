@@ -3,6 +3,7 @@ extern crate gstreamer_app as gst_app;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
+use rayon::{prelude::ParallelIterator, slice::ParallelSliceMut};
 
 pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     // let pipeline_str = format!(
@@ -24,7 +25,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
 
     // * Source
     let video_info =
-        gst_video::VideoInfo::builder(gst_video::VideoFormat::Bgrx, width as u32, height as u32)
+        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
@@ -43,7 +44,10 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make("x264enc").build().unwrap();
+    let video_encoder = ElementFactory::make("x264enc")
+        .property("bitrate", 2500_u32)
+        .build()
+        .unwrap();
     let video_decoder = ElementFactory::make("h264parse").build().unwrap();
 
     // * Mux
@@ -112,35 +116,31 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                 let b = (i % 255) as u8;
 
                 let PROFFILE = std::time::Instant::now();
-                let mut buffer = gst::Buffer::with_size(width * height * 4).unwrap();
+                let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
                 {
                     let buffer = buffer.get_mut().unwrap();
-                    let mut vframe =
-                        gst_video::VideoFrameRef::from_buffer_ref_writable(buffer, &video_info)
-                            .unwrap();
+                    // let mut vframe =
+                    //     gst_video::VideoFrameRef::from_buffer_ref_writable(buffer, &video_info)
+                    //         .unwrap();
 
-                    let width = vframe.width() as usize;
-                    let height = vframe.height() as usize;
+                    // let width = vframe.width() as usize;
+                    // let height = vframe.height() as usize;
 
-                    let stride = vframe.plane_stride()[0] as usize;
+                    // let stride = vframe.plane_stride()[0] as usize;
 
                     println!("Buffer setup took {}ms!", PROFFILE.elapsed().as_millis());
-                    
+
                     let PROFILE = std::time::Instant::now();
-                    for line in vframe
-                        .plane_data_mut(0)
+                    buffer
+                        .map_writable()
                         .unwrap()
-                        .chunks_exact_mut(stride)
-                        .take(height)
-                    {
-                        // Iterate over each pixel of 4 bytes in that line
-                        for pixel in line[..(4 * width)].chunks_exact_mut(4) {
+                        .as_mut_slice()
+                        .par_chunks_exact_mut(3)
+                        .for_each(|pixel| {
                             pixel[0] = r;
                             pixel[1] = g;
                             pixel[2] = b;
-                            pixel[3] = 1;
-                        }
-                    }
+                        });
                     println!("Drawing took {}ms!", PROFILE.elapsed().as_millis());
                 }
 

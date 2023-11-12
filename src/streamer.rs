@@ -49,6 +49,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make("h264parse").build().unwrap();
+    let video_queue = ElementFactory::make("queue").build().unwrap();
 
     // * Mux
     let mux = ElementFactory::make("flvmux")
@@ -77,6 +78,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
             &caps_filter,
             &video_encoder,
             &video_decoder,
+            &video_queue,
             &mux,
             &rtmp_sink,
             &audio_source,
@@ -91,6 +93,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
         &caps_filter,
         &video_encoder,
         &video_decoder,
+        &video_queue,
         &mux,
         &rtmp_sink,
     ])

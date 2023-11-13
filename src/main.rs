@@ -35,36 +35,18 @@ fn main() {
 
             frame.clear(Color::BLACK);
 
-            let mut info =
-                fontdue::layout::Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
-            info.append(
-                &fonts,
-                &fontdue::layout::TextStyle::new(&format!("Frame {frame_index}"), 20.0, 0),
-            );
-            info.append(
-                &fonts,
-                &fontdue::layout::TextStyle::new(
-                    &format!("Rendered in {}ms", last_render_time / 1000),
-                    20.0,
-                    0,
+            frame.draw_text(
+                10,
+                10,
+                &format!(
+                    "Frame {frame_index}\nRendered in {}ms\nMax possible framerate: {:.2}",
+                    last_render_time / 1000,
+                    1_000_000.0 / last_render_time as f32
                 ),
-            );
-            info.append(
+                Color::WHITE,
+                30.0,
                 &fonts,
-                &fontdue::layout::TextStyle::new(
-                    &format!(
-                        "Max possible FPS: {:.2}",
-                        1_000_000.0 / last_render_time as f32
-                    ),
-                    20.0,
-                    0,
-                ),
             );
-            info.append(
-                &fonts,
-                &fontdue::layout::TextStyle::new(&format!("Frame {frame_index}"), 20.0, 0),
-            );
-            frame.draw_layout_text(10, 10, &info, Color::WHITE, &fonts);
 
             last_render_time = render_start.elapsed().as_micros();
             frame_index += 1;

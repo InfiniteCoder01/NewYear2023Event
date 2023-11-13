@@ -125,11 +125,13 @@ impl<'a> Frame<'a> {
                 y,
                 metrics.width,
                 metrics.height,
-                |u, v, pixel| unsafe {
+                |u, v, pixel| {
                     let index = (u + v * metrics.width) * 3;
-                    *pixel.get_unchecked_mut(0) = bitmap[index];
-                    *pixel.get_unchecked_mut(1) = bitmap[index + 1];
-                    *pixel.get_unchecked_mut(2) = bitmap[index + 2];
+                    // get_unchecked_mut - 5000us
+                    // *pixel.get_unchecked_mut(0) = bitmap[index];
+                    // *pixel.get_unchecked_mut(1) = bitmap[index + 1];
+                    // *pixel.get_unchecked_mut(2) = bitmap[index + 2];
+                    pixel.copy_from_slice(&bitmap[index..index + 3]);
                 },
             );
         });

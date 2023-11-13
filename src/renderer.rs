@@ -103,9 +103,9 @@ impl<'a> Frame<'a> {
     pub fn fill_rect(&mut self, x: i32, y: i32, width: usize, height: usize, color: Color) {
         self.parallel_region(x, y, width, height, |_, _, pixel| unsafe {
             // get_unchecked_mut - 5000/6730us
-            *pixel.get_unchecked_mut(0) = color.b;
+            *pixel.get_unchecked_mut(0) = color.r;
             *pixel.get_unchecked_mut(1) = color.g;
-            *pixel.get_unchecked_mut(2) = color.r;
+            *pixel.get_unchecked_mut(2) = color.b;
             *pixel.get_unchecked_mut(3) = 0;
             // pixel.copy_from_slice(&bitmap[index..index + 3]);
         });

@@ -69,7 +69,7 @@ pub fn stream(
     // * Audio
     let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
-        .property("bitrate", audio_bitrate as u32)
+        .property("bitrate", audio_bitrate as i32)
         .build()
         .unwrap();
 

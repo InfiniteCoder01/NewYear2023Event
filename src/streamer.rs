@@ -15,7 +15,7 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "vaapipostproc ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "nvvidconv ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
@@ -42,7 +42,7 @@ pub fn stream(
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("vaapipostproc").build().unwrap();
+    let videoconvert = ElementFactory::make("nvvidconv").build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",

@@ -28,7 +28,7 @@ pub fn stream(
 
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
-
+    
     // * Source
     let (width, height) = size;
     let video_info =
@@ -39,6 +39,7 @@ pub fn stream(
     let video_source = gst_app::AppSrc::builder()
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
+        .format(gst::Format::Time)
         .build();
 
     // * Convert

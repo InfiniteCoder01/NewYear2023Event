@@ -33,15 +33,38 @@ fn main() {
         move |frame| {
             let render_start = std::time::Instant::now(); // ! Profiling
 
-            frame.clear(Color::WHITE);
-            frame.draw_text(
-                100,
-                100,
-                &format!("Frame {frame_index}\nRendered in {last_render_time}ms"),
-                Color::RED,
-                100.0,
+            frame.clear(Color::BLACK);
+
+            let mut info =
+                fontdue::layout::Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
+            info.append(
                 &fonts,
+                &fontdue::layout::TextStyle::new(&format!("Frame {frame_index}"), 20.0, 0),
             );
+            info.append(
+                &fonts,
+                &fontdue::layout::TextStyle::new(
+                    &format!("Rendered in {}ms", last_render_time / 1000),
+                    20.0,
+                    0,
+                ),
+            );
+            info.append(
+                &fonts,
+                &fontdue::layout::TextStyle::new(
+                    &format!(
+                        "Max possible FPS: {:.2}",
+                        1_000_000.0 / last_render_time as f32
+                    ),
+                    20.0,
+                    0,
+                ),
+            );
+            info.append(
+                &fonts,
+                &fontdue::layout::TextStyle::new(&format!("Frame {frame_index}"), 20.0, 0),
+            );
+            frame.draw_layout_text(10, 10, &info, Color::WHITE, &fonts);
 
             last_render_time = render_start.elapsed().as_micros();
             frame_index += 1;

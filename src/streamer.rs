@@ -36,11 +36,12 @@ pub fn stream(
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
-    let video_source = gst_app::AppSrc::builder()
-        .caps(&video_info.to_caps().unwrap())
-        .is_live(true)
-        .format(gst::Format::Time)
-        .build();
+    let video_source = ElementFactory::make("videotestsrc").build().unwrap();
+    // gst_app::AppSrc::builder()
+    //     .caps(&video_info.to_caps().unwrap())
+    //     .is_live(true)
+    //     .format(gst::Format::Time)
+    //     .build();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
@@ -104,22 +105,22 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    video_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(move |appsrc, _| {
-                let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
-                {
-                    let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
-                    let mut frame =
-                        crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
+    // video_source.set_callbacks(
+    //     gst_app::AppSrcCallbacks::builder()
+    //         .need_data(move |appsrc, _| {
+    //             let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
+    //             {
+    //                 let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
+    //                 let mut frame =
+    //                     crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
-                    draw_frame(&mut frame);
-                };
+    //                 draw_frame(&mut frame);
+    //             };
 
-                appsrc.push_buffer(buffer).unwrap();
-            })
-            .build(),
-    );
+    //             appsrc.push_buffer(buffer).unwrap();
+    //         })
+    //         .build(),
+    // );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

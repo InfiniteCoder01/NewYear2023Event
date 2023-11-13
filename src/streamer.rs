@@ -15,7 +15,7 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "v4l2convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",

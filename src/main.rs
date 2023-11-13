@@ -32,6 +32,7 @@ fn main() {
         24000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |frame| {
+            println!("Frame!");
             let render_start = std::time::Instant::now(); // ! Profiling
             let uptime = stream_start.elapsed();
 

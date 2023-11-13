@@ -20,7 +20,7 @@ fn main() {
     .unwrap();
     let fonts = [font];
     let mut frame_index = 0;
-    let mut render_time_avg = 0;
+    let mut last_render_time = 0;
     streamer::stream(
         // 1920,
         // 1080,
@@ -34,16 +34,16 @@ fn main() {
             let render_start = std::time::Instant::now(); // ! Profiling
 
             frame.clear(Color::WHITE);
-            frame.draw_text(100, 100, "Hello, World!", Color::RED, 100.0, &fonts);
-
-            let render_time = render_start.elapsed().as_micros();
-            render_time_avg += render_time;
-            frame_index += 1;
-            println!(
-                "Frame {frame_index} rendered in {}ms, AVG render time: {}ms",
-                render_time,
-                render_time_avg / frame_index
+            frame.draw_text(
+                100,
+                100,
+                &format!("Frame {frame_index}\nRendered in {last_render_time}ms"),
+                Color::RED,
+                100.0,
+                &fonts,
             );
+
+            last_render_time = render_start.elapsed().as_micros();
         },
     );
 }

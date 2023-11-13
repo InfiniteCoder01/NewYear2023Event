@@ -52,9 +52,10 @@ impl Color {
     #[inline(always)]
     #[rustfmt::skip]
     pub unsafe fn blend_pixel(&self, pixel: &mut [u8], alpha: u8) {
-        *pixel.get_unchecked_mut(0) = (*pixel.get_unchecked(0) as u32 * (255 - alpha as u32) / 255 + self.r as u32 * alpha as u32) as _;
-        *pixel.get_unchecked_mut(1) = (*pixel.get_unchecked(1) as u32 * (255 - alpha as u32) / 255 + self.g as u32 * alpha as u32) as _;
-        *pixel.get_unchecked_mut(2) = (*pixel.get_unchecked(2) as u32 * (255 - alpha as u32) / 255 + self.b as u32 * alpha as u32) as _;
+        let inverse_alpha = 255 - alpha as u32;
+        *pixel.get_unchecked_mut(0) = ((*pixel.get_unchecked(0) as u32 * inverse_alpha + self.r as u32 * alpha as u32) / 255) as _;
+        *pixel.get_unchecked_mut(1) = ((*pixel.get_unchecked(1) as u32 * inverse_alpha + self.g as u32 * alpha as u32) / 255) as _;
+        *pixel.get_unchecked_mut(2) = ((*pixel.get_unchecked(2) as u32 * inverse_alpha + self.b as u32 * alpha as u32) / 255) as _;
     }
 }
 

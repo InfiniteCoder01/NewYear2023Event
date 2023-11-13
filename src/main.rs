@@ -51,9 +51,10 @@ fn main() {
                 &fonts,
             );
 
-            frame.fill_circle(
-                frame.width as i32 / 2 + (uptime.as_secs_f32().sin() * 100.0) as i32,
-                frame.height as i32 / 2,
+            frame.fill_rect(
+                frame.width as i32 / 2 + (uptime.as_secs_f32().sin() * 100.0) as i32 - 50,
+                frame.height as i32 / 2 - 50,
+                100,
                 100,
                 Color::RED,
             );

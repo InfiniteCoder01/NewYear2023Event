@@ -33,8 +33,11 @@ impl Color {
         Self::new(color, color, color)
     }
 
-    fn into_slice(self) -> [u8; 3] {
-        [self.r, self.g, self.b]
+    #[inline(always)]
+    unsafe fn set_pixel(self, pixel: *mut u8) {
+        *pixel = self.r;
+        *pixel.add(1) = self.g;
+        *pixel.add(2) = self.b;
     }
 }
 
@@ -80,7 +83,7 @@ impl<'a> Frame<'a> {
         y0: i32,
         width: usize,
         height: usize,
-        shader: impl Fn(usize, usize, &mut [u8]) + Sync + Send,
+        shader: impl Fn(usize, usize, *mut u8) + Sync + Send,
     ) {
         let (x, y) = (x0.max(0) as usize, y0.max(0) as usize);
         let x = x.min(self.width - 1);
@@ -91,29 +94,23 @@ impl<'a> Frame<'a> {
             .into_par_iter()
             .for_each(|y| {
                 let index = y * self.width + x;
-                let row = unsafe {
-                    std::slice::from_raw_parts_mut(buffer.clone().0, self.width * self.height * 3)
-                };
-                row[index * 3..(index + width.min(self.width - x)) * 3]
-                    .par_chunks_exact_mut(3)
-                    .enumerate()
-                    .for_each(|(x, pixel)| {
-                        shader((x as i32 - x0) as _, (y as i32 - y0) as _, pixel)
+                (index * 3..(index + width.min(self.width - x)) * 3)
+                    .into_par_iter()
+                    .step_by(3)
+                    .for_each(|pixel_index| unsafe {
+                        let x = (pixel_index - index) / 3;
+                        shader(
+                            (x as i32 - x0) as _,
+                            (y as i32 - y0) as _,
+                            buffer.clone().0.add(pixel_index),
+                        )
                     });
             });
     }
 
     pub fn fill_rect(&mut self, x: i32, y: i32, width: usize, height: usize, color: Color) {
-        let color = color.into_slice();
-        self.parallel_region(x, y, width, height, |_, _, pixel| {
-            // get_unchecked_mut - 5000/6730us
-            // RGBx - 7590us
-            // RGBx copy_from_slice - 8265us
-            // *pixel.get_unchecked_mut(0) = color.r;
-            // *pixel.get_unchecked_mut(1) = color.g;
-            // *pixel.get_unchecked_mut(2) = color.b;
-            // *pixel.get_unchecked_mut(3) = 0;
-            pixel.copy_from_slice(&color);
+        self.parallel_region(x, y, width, height, |_, _, pixel| unsafe {
+            color.set_pixel(pixel);
         });
     }
 
@@ -135,12 +132,14 @@ impl<'a> Frame<'a> {
                 y,
                 metrics.width,
                 metrics.height,
-                |u, v, pixel| {
+                |u, v, pixel| unsafe {
                     let index = (u + v * metrics.width) * 3;
+                    // bitmap[index];
+                    // bitmap[index + 1];
+                    // bitmap[index + 2];
                     // *pixel.get_unchecked_mut(0) = bitmap[index];
                     // *pixel.get_unchecked_mut(1) = bitmap[index + 1];
                     // *pixel.get_unchecked_mut(2) = bitmap[index + 2];
-                    // pixel.copy_from_slice(&bitmap[index..index + 3]);
                 },
             );
         });

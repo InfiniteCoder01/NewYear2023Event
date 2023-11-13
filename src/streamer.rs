@@ -127,7 +127,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                     let render_time = render_start.elapsed().as_micros();
                     render_time_avg += render_time;
                     println!(
-                        "Frame {frame_index} rendered in {}us, AVG render time: {}us",
+                        "Frame {frame_index} rendered in {}ms, AVG render time: {}ms",
                         render_time,
                         render_time_avg / (frame_index + 1)
                     );

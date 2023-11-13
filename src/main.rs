@@ -36,20 +36,20 @@ fn main() {
             let render_start = std::time::Instant::now(); // ! Profiling
             let uptime = stream_start.elapsed();
 
-            // frame.clear(Color::BLACK);
-            // frame.draw_text(
-            //     10,
-            //     10,
-            //     &format!(
-            //         "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nMax possible framerate: {:.2}",
-            //         uptime.hhmmssxxx(),
-            //         last_render_time / 1000,
-            //         1_000_000.0 / last_render_time as f32,
-            //     ),
-            //     Color::WHITE,
-            //     30.0,
-            //     &fonts,
-            // );
+            frame.clear(Color::BLACK);
+            frame.draw_text(
+                10,
+                10,
+                &format!(
+                    "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nMax possible framerate: {:.2}",
+                    uptime.hhmmssxxx(),
+                    last_render_time / 1000,
+                    1_000_000.0 / last_render_time as f32,
+                ),
+                Color::WHITE,
+                30.0,
+                &fonts,
+            );
 
             frame.fill_rect(
                 frame.width as i32 / 2 + (uptime.as_secs_f32().sin() * 100.0) as i32 - 50,

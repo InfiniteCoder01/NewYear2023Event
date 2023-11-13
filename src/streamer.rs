@@ -39,11 +39,10 @@ pub fn stream(
     let video_source = gst_app::AppSrc::builder()
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
-        .format(gst::Format::Default)
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
+    let videoconvert = ElementFactory::make("videoconvert").build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",

@@ -15,8 +15,8 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "nvvidconv ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
-    //         "x264enc ! h264parse ! ",
+    //         "v4l2video18convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "v4l2h264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
     //         "audiotestsrc ! voaacenc bitrate=128000 ! mux."
@@ -42,7 +42,7 @@ pub fn stream(
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("nvvidconv").build().unwrap();
+    let videoconvert = ElementFactory::make("v4l2video18convert").build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -50,7 +50,7 @@ pub fn stream(
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make("x264enc")
+    let video_encoder = ElementFactory::make("v4l2h264enc")
         .property("bitrate", 2500_u32)
         .build()
         .unwrap();

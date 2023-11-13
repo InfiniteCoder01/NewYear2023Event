@@ -25,7 +25,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
 
     // * Source
     let video_info =
-        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgbx, width as u32, height as u32)
+        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();

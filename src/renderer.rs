@@ -33,8 +33,8 @@ impl Color {
         Self::new(color, color, color)
     }
 
-    fn into_slice(&self) -> [u8; 4] {
-        [self.r, self.g, self.b, 0]
+    fn into_slice(self) -> [u8; 3] {
+        [self.r, self.g, self.b]
     }
 }
 
@@ -65,11 +65,10 @@ impl<'a> Frame<'a> {
     }
 
     pub fn clear(&mut self, color: Color) {
-        self.buffer.par_chunks_exact_mut(4).for_each(|pixel| {
+        self.buffer.par_chunks_exact_mut(3).for_each(|pixel| {
             pixel[0] = color.r;
             pixel[1] = color.g;
             pixel[2] = color.b;
-            pixel[3] = 0;
         });
     }
 
@@ -93,10 +92,10 @@ impl<'a> Frame<'a> {
             .for_each(|y| {
                 let index = y * self.width + x;
                 let row = unsafe {
-                    std::slice::from_raw_parts_mut(buffer.clone().0, self.width * self.height * 4)
+                    std::slice::from_raw_parts_mut(buffer.clone().0, self.width * self.height * 3)
                 };
-                row[index * 4..(index + width.min(self.width - x)) * 4]
-                    .par_chunks_exact_mut(4)
+                row[index * 3..(index + width.min(self.width - x)) * 3]
+                    .par_chunks_exact_mut(3)
                     .enumerate()
                     .for_each(|(x, pixel)| {
                         shader((x as i32 - x0) as _, (y as i32 - y0) as _, pixel)
@@ -109,6 +108,7 @@ impl<'a> Frame<'a> {
         self.parallel_region(x, y, width, height, |_, _, pixel| {
             // get_unchecked_mut - 5000/6730us
             // RGBx - 7590us
+            // RGBx copy_from_slice - 8265us
             // *pixel.get_unchecked_mut(0) = color.r;
             // *pixel.get_unchecked_mut(1) = color.g;
             // *pixel.get_unchecked_mut(2) = color.b;

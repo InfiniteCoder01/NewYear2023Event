@@ -34,6 +34,7 @@ fn main() {
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |frame| {
             let render_start = std::time::Instant::now(); // ! Profiling
+            let uptime = stream_start.elapsed();
 
             frame.clear(Color::BLACK);
             frame.draw_text(
@@ -41,13 +42,20 @@ fn main() {
                 10,
                 &format!(
                     "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nMax possible framerate: {:.2}",
-                    stream_start.elapsed().hhmmssxxx(),
+                    uptime.hhmmssxxx(),
                     last_render_time / 1000,
                     1_000_000.0 / last_render_time as f32,
                 ),
                 Color::WHITE,
                 30.0,
                 &fonts,
+            );
+
+            frame.fill_circle(
+                frame.width as i32 / 2 + (uptime.as_secs_f32().sin() * 100.0) as i32,
+                frame.height as i32 / 2,
+                100,
+                Color::RED,
             );
 
             last_render_time = render_start.elapsed().as_micros();

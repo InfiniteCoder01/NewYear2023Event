@@ -131,6 +131,20 @@ impl<'a> Frame<'a> {
         });
     }
 
+    pub fn fill_circle(&mut self, x: i32, y: i32, radius: usize, color: Color) {
+        self.parallel_region(
+            x - radius as i32,
+            y - radius as i32,
+            radius * 2,
+            radius * 2,
+            |x, y, pixel| unsafe {
+                if x * x + y * y <= radius * radius {
+                    color.set_pixel(pixel);
+                }
+            },
+        );
+    }
+
     pub fn draw_layout_text(
         &mut self,
         x: i32,

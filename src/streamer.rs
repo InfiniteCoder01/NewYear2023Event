@@ -111,7 +111,7 @@ pub fn stream(
     //         })
     //         .build(),
     // );
-    std::thread::spawn(move || {
+    std::thread::spawn(move || loop {
         let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
         {
             let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
@@ -120,9 +120,7 @@ pub fn stream(
             draw_frame(&mut frame);
         };
 
-        println!("Pushing...");
         video_source.push_buffer(buffer).unwrap();
-        println!("Pushed!");
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

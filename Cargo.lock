@@ -555,6 +555,7 @@ name = "new-year-2024"
 version = "0.1.0"
 dependencies = [
  "fontdue",
+ "glib",
  "gstreamer",
  "gstreamer-app",
  "gstreamer-video",

@@ -16,7 +16,7 @@ pub fn stream(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
     //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
-    //         "v4l2h264enc ! h264parse ! ",
+    //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
     //         "audiotestsrc ! voaacenc bitrate=128000 ! mux."
@@ -51,7 +51,7 @@ pub fn stream(
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make("v4l2h264enc").build().unwrap();
+    let video_encoder = ElementFactory::make("x264enc").build().unwrap();
     let video_decoder = ElementFactory::make("h264parse").build().unwrap();
 
     // * Mux

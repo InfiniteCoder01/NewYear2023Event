@@ -34,10 +34,10 @@ impl Color {
     }
 
     #[inline(always)]
-    unsafe fn set_pixel(self, pixel: *mut u8) {
-        *pixel = self.r;
-        *pixel.add(1) = self.g;
-        *pixel.add(2) = self.b;
+    unsafe fn set_pixel(self, pixel: &mut [u8]) {
+        *pixel.get_unchecked_mut(0) = self.r;
+        *pixel.get_unchecked_mut(1) = self.g;
+        *pixel.get_unchecked_mut(2) = self.b;
     }
 }
 
@@ -83,7 +83,7 @@ impl<'a> Frame<'a> {
         y0: i32,
         width: usize,
         height: usize,
-        shader: impl Fn(usize, usize, *mut u8) + Sync + Send,
+        shader: impl Fn(usize, usize, &mut [u8]) + Sync + Send,
     ) {
         let (x, y) = (x0.max(0) as usize, y0.max(0) as usize);
         let x = x.min(self.width - 1);
@@ -94,16 +94,16 @@ impl<'a> Frame<'a> {
             .into_par_iter()
             .for_each(|y| {
                 let index = y * self.width + x;
-                (index * 3..(index + width.min(self.width - x)) * 3)
-                    .into_par_iter()
-                    .step_by(3)
-                    .for_each(|pixel_index| unsafe {
-                        let x = (pixel_index - index) / 3;
-                        shader(
-                            (x as i32 - x0) as _,
-                            (y as i32 - y0) as _,
-                            buffer.clone().0.add(pixel_index),
-                        )
+                let row = unsafe {
+                    std::slice::from_raw_parts_mut(
+                        buffer.clone().0.add(index * 3),
+                        (index + width.min(self.width - x)) * 3,
+                    )
+                };
+                row.par_chunks_exact_mut(3)
+                    .enumerate()
+                    .for_each(|(x, pixel)| {
+                        shader((x as i32 - x0) as _, (y as i32 - y0) as _, pixel)
                     });
             });
     }
@@ -134,12 +134,9 @@ impl<'a> Frame<'a> {
                 metrics.height,
                 |u, v, pixel| unsafe {
                     let index = (u + v * metrics.width) * 3;
-                    // bitmap[index];
-                    // bitmap[index + 1];
-                    // bitmap[index + 2];
-                    // *pixel.get_unchecked_mut(0) = bitmap[index];
-                    // *pixel.get_unchecked_mut(1) = bitmap[index + 1];
-                    // *pixel.get_unchecked_mut(2) = bitmap[index + 2];
+                    *pixel.get_unchecked_mut(0) = bitmap[index];
+                    *pixel.get_unchecked_mut(1) = bitmap[index + 1];
+                    *pixel.get_unchecked_mut(2) = bitmap[index + 2];
                 },
             );
         });

@@ -138,9 +138,9 @@ impl<'a> Frame<'a> {
             radius * 2,
             radius * 2,
             |x, y, pixel| unsafe {
-                if x * x + y * y <= radius * radius {
-                    color.set_pixel(pixel);
-                }
+                let radius = radius as i32;
+                let (x, y) = (x as i32 - radius, y as i32 - radius);
+                color.blend_pixel(pixel, (x * x + y * y <= radius * radius) as u8 * 255);
             },
         );
     }

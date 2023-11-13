@@ -61,10 +61,11 @@ impl<'a> Frame<'a> {
     }
 
     pub fn clear(&mut self, color: Color) {
-        self.buffer.par_chunks_exact_mut(3).for_each(|pixel| {
+        self.buffer.par_chunks_exact_mut(4).for_each(|pixel| {
             pixel[0] = color.r;
             pixel[1] = color.g;
             pixel[2] = color.b;
+            pixel[3] = 0;
         });
     }
 
@@ -88,10 +89,10 @@ impl<'a> Frame<'a> {
             .for_each(|y| {
                 let index = y * self.width + x;
                 let row = unsafe {
-                    std::slice::from_raw_parts_mut(buffer.clone().0, self.width * self.height * 3)
+                    std::slice::from_raw_parts_mut(buffer.clone().0, self.width * self.height * 4)
                 };
-                row[index * 3..(index + width.min(self.width - x)) * 3]
-                    .par_chunks_exact_mut(3)
+                row[index * 4..(index + width.min(self.width - x)) * 4]
+                    .par_chunks_exact_mut(4)
                     .enumerate()
                     .for_each(|(x, pixel)| {
                         shader((x as i32 - x0) as _, (y as i32 - y0) as _, pixel)
@@ -101,9 +102,12 @@ impl<'a> Frame<'a> {
 
     pub fn fill_rect(&mut self, x: i32, y: i32, width: usize, height: usize, color: Color) {
         self.parallel_region(x, y, width, height, |_, _, pixel| unsafe {
+            // get_unchecked_mut - 5000/6730us
             *pixel.get_unchecked_mut(0) = color.r;
             *pixel.get_unchecked_mut(1) = color.g;
             *pixel.get_unchecked_mut(2) = color.b;
+            *pixel.get_unchecked_mut(3) = 0;
+            // pixel.copy_from_slice(&bitmap[index..index + 3]);
         });
     }
 
@@ -127,11 +131,10 @@ impl<'a> Frame<'a> {
                 metrics.height,
                 |u, v, pixel| {
                     let index = (u + v * metrics.width) * 3;
-                    // get_unchecked_mut - 5000us
                     // *pixel.get_unchecked_mut(0) = bitmap[index];
                     // *pixel.get_unchecked_mut(1) = bitmap[index + 1];
                     // *pixel.get_unchecked_mut(2) = bitmap[index + 2];
-                    pixel.copy_from_slice(&bitmap[index..index + 3]);
+                    // pixel.copy_from_slice(&bitmap[index..index + 3]);
                 },
             );
         });

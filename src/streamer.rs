@@ -28,7 +28,7 @@ pub fn stream(
 
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
-
+    
     // * Source
     let (width, height) = size;
     let video_info =
@@ -129,7 +129,7 @@ pub fn stream(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!("{:?}", err.message());
+                panic!("{}", err);
             }
             _ => (),
         }

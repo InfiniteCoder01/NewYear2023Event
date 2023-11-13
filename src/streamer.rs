@@ -120,7 +120,9 @@ pub fn stream(
             draw_frame(&mut frame);
         };
 
+        println!("Pushing...");
         video_source.push_buffer(buffer).unwrap();
+        println!("Pushed!");
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

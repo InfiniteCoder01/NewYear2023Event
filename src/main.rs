@@ -27,7 +27,7 @@ fn main() {
         // (1920, 1080),
         // (1280, 720),
         (854, 480),
-        20,
+        60,
         // 128000,
         24000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),

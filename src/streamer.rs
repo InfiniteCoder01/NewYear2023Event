@@ -15,7 +15,7 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "v4l2convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
@@ -28,7 +28,7 @@ pub fn stream(
 
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
-    
+
     // * Source
     let (width, height) = size;
     let video_info =
@@ -39,10 +39,11 @@ pub fn stream(
     let video_source = gst_app::AppSrc::builder()
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
+        .format(gst::Format::Time)
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("videoconvert").build().unwrap();
+    let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -103,22 +104,24 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    video_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(move |appsrc, _| {
-                let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
-                {
-                    let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
-                    let mut frame =
-                        crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
+    // video_source.set_callbacks(
+    //     gst_app::AppSrcCallbacks::builder()
+    //         .need_data(move |appsrc, _| {
 
-                    draw_frame(&mut frame);
-                };
+    //         })
+    //         .build(),
+    // );
+    std::thread::spawn(move || {
+        let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
+        {
+            let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
+            let mut frame = crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
-                appsrc.push_buffer(buffer).unwrap();
-            })
-            .build(),
-    );
+            draw_frame(&mut frame);
+        };
+
+        video_source.push_buffer(buffer).unwrap();
+    });
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

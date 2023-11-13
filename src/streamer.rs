@@ -15,8 +15,8 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
-    //         "x264enc ! h264parse ! queue ! ",
+    //         "vaapipostproc ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
     //         "audiotestsrc ! voaacenc bitrate=128000 ! mux."
@@ -42,7 +42,7 @@ pub fn stream(
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("videoconvert").build().unwrap();
+    let videoconvert = ElementFactory::make("vaapipostproc").build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -55,7 +55,6 @@ pub fn stream(
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make("h264parse").build().unwrap();
-    // let video_queue = ElementFactory::make("queue").build().unwrap();
 
     // * Mux
     let mux = ElementFactory::make("flvmux")
@@ -84,7 +83,6 @@ pub fn stream(
             &caps_filter,
             &video_encoder,
             &video_decoder,
-            // &video_queue,
             &mux,
             &rtmp_sink,
             &audio_source,
@@ -99,7 +97,6 @@ pub fn stream(
         &caps_filter,
         &video_encoder,
         &video_decoder,
-        // &video_queue,
         &mux,
         &rtmp_sink,
     ])

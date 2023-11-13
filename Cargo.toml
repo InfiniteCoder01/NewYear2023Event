@@ -11,3 +11,5 @@ rayon = "1.8.0"
 
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"
+
+fontdue = { version = "0.7.3", features = ["parallel", "rayon"] }

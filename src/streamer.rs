@@ -106,10 +106,8 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     video_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |appsrc, _| {
-                let frame_start = std::time::Instant::now(); // ! Profiling
-
                 let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
-                let time_to_render = {
+                {
                     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
                     let mut frame =
                         crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
@@ -117,18 +115,21 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                     let render_start = std::time::Instant::now(); // ! Profiling
 
                     // frame.clear(Color::grayscale((frame_index % 255) as _));
-                    frame.fill_rect(0, 0, frame.width, frame.height, Color::new(255, (frame_index % 255) as _, 0));
+                    frame.fill_rect(
+                        0,
+                        0,
+                        frame.width,
+                        frame.height,
+                        Color::new(255, (frame_index % 255) as _, 0),
+                    );
 
-                    render_start.elapsed()
+                    println!(
+                        "Frame {frame_index} rendered in {}us",
+                        render_start.elapsed().as_micros()
+                    );
                 };
 
                 appsrc.push_buffer(buffer).unwrap();
-
-                println!(
-                    "Frame {frame_index} completed in {}ms (rendering took {}ms)",
-                    frame_start.elapsed().as_millis(),
-                    time_to_render.as_millis(),
-                );
                 frame_index += 1;
             })
             .build(),

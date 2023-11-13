@@ -44,6 +44,7 @@ fn main() {
             );
 
             last_render_time = render_start.elapsed().as_micros();
+            frame_index += 1;
         },
     );
 }

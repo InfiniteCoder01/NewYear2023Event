@@ -142,6 +142,10 @@ impl<'a> Frame<'a> {
         let frame = ThreadPtr(self as *mut Self);
 
         layout.glyphs().par_iter().for_each(|glyph| {
+            if glyph.parent == '\n' {
+                return;
+            }
+
             let (metrics, bitmap) =
                 fonts[glyph.font_index].rasterize_indexed(glyph.key.glyph_index, glyph.key.px);
             unsafe { &mut (*frame.clone().0) }.parallel_region(

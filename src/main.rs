@@ -1,7 +1,8 @@
 pub mod renderer;
-mod streamer;
+pub mod streamer;
 
 use crate::renderer::*;
+use hhmmss::Hhmmss;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +20,7 @@ fn main() {
     )
     .unwrap();
     let fonts = [font];
+    let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
     let mut last_render_time = 0;
     streamer::stream(
@@ -34,14 +36,14 @@ fn main() {
             let render_start = std::time::Instant::now(); // ! Profiling
 
             frame.clear(Color::BLACK);
-
             frame.draw_text(
                 10,
                 10,
                 &format!(
-                    "Frame {frame_index}\nRendered in {}ms\nMax possible framerate: {:.2}",
+                    "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nMax possible framerate: {:.2}",
+                    stream_start.elapsed().hhmmssxxx(),
                     last_render_time / 1000,
-                    1_000_000.0 / last_render_time as f32
+                    1_000_000.0 / last_render_time as f32,
                 ),
                 Color::WHITE,
                 30.0,

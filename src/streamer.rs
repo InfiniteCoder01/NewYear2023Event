@@ -6,9 +6,9 @@ use crate::renderer::*;
 use gst::{prelude::*, Caps, ElementFactory};
 
 pub fn stream(
-    width: usize,
-    height: usize,
+    size: (usize, usize),
     fps: usize,
+    audio_bitrate: usize,
     rtmp_uri: &str,
     mut draw_frame: impl FnMut(&mut Frame) + Send + Sync + 'static,
 ) {
@@ -28,8 +28,9 @@ pub fn stream(
 
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
-
+    
     // * Source
+    let (width, height) = size;
     let video_info =
         gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
             .fps(gst::Fraction::new(fps as _, 1))
@@ -50,10 +51,7 @@ pub fn stream(
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make("v4l2h264enc")
-        .property("bitrate", 2500_u32)
-        .build()
-        .unwrap();
+    let video_encoder = ElementFactory::make("v4l2h264enc").build().unwrap();
     let video_decoder = ElementFactory::make("h264parse").build().unwrap();
 
     // * Mux
@@ -71,7 +69,7 @@ pub fn stream(
     // * Audio
     let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
-        .property("bitrate", 128000)
+        .property("bitrate", audio_bitrate as u32)
         .build()
         .unwrap();
 

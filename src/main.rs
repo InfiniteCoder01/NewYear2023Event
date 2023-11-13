@@ -24,13 +24,12 @@ fn main() {
     let mut frame_index = 0;
     let mut last_render_time = 0;
     streamer::stream(
-        // 1920,
-        // 1080,
-        // 1280,
-        // 720,
-        854,
-        480,
+        // (1920, 1080),
+        // (1280, 720),
+        (854, 480),
         20,
+        // 128000,
+        24000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |frame| {
             let render_start = std::time::Instant::now(); // ! Profiling

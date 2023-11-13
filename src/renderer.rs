@@ -33,11 +33,28 @@ impl Color {
         Self::new(color, color, color)
     }
 
+    /// Sets the pixel of this [`Color`].
+    ///
+    /// # Safety
+    /// Use this only in [`Frame::parallel_region`]
+    /// .
     #[inline(always)]
-    unsafe fn set_pixel(self, pixel: &mut [u8]) {
+    pub unsafe fn set_pixel(self, pixel: &mut [u8]) {
         *pixel.get_unchecked_mut(0) = self.r;
         *pixel.get_unchecked_mut(1) = self.g;
         *pixel.get_unchecked_mut(2) = self.b;
+    }
+
+    /// Blends the pixel of this [`Color`] with the pixel of the given [`Color`] by the given alpha value.
+    ///
+    /// # Safety
+    /// Use this only in [`Frame::parallel_region`]
+    #[inline(always)]
+    #[rustfmt::skip]
+    pub unsafe fn blend_pixel(&self, pixel: &mut [u8], alpha: u8) {
+        *pixel.get_unchecked_mut(0) = (*pixel.get_unchecked(0) as u32 * (255 - alpha as u32) / 255 + self.r as u32 * alpha as u32) as _;
+        *pixel.get_unchecked_mut(1) = (*pixel.get_unchecked(1) as u32 * (255 - alpha as u32) / 255 + self.g as u32 * alpha as u32) as _;
+        *pixel.get_unchecked_mut(2) = (*pixel.get_unchecked(2) as u32 * (255 - alpha as u32) / 255 + self.b as u32 * alpha as u32) as _;
     }
 }
 
@@ -100,11 +117,10 @@ impl<'a> Frame<'a> {
                         width.min(self.width - x) * 3,
                     )
                 };
+                let y = (y as i32 - y0) as _;
                 row.par_chunks_exact_mut(3)
                     .enumerate()
-                    .for_each(|(x, pixel)| {
-                        shader((x as i32 - x0) as _, (y as i32 - y0) as _, pixel)
-                    });
+                    .for_each(|(x, pixel)| shader(x, y, pixel));
             });
     }
 
@@ -119,40 +135,37 @@ impl<'a> Frame<'a> {
         x: i32,
         y: i32,
         layout: &Layout,
-        // color: Color,
+        color: Color,
         fonts: &[fontdue::Font],
     ) {
         let frame = ThreadPtr(self as *mut Self);
 
         layout.glyphs().par_iter().for_each(|glyph| {
-            let (metrics, bitmap) = fonts[glyph.font_index]
-                .rasterize_indexed_subpixel(glyph.key.glyph_index, glyph.key.px);
+            let (metrics, bitmap) =
+                fonts[glyph.font_index].rasterize_indexed(glyph.key.glyph_index, glyph.key.px);
             unsafe { &mut (*frame.clone().0) }.parallel_region(
-                x,
-                y,
+                x + glyph.x as i32,
+                y + glyph.y as i32,
                 metrics.width,
                 metrics.height,
                 |u, v, pixel| unsafe {
-                    let index = (u + v * metrics.width) * 3;
-                    *pixel.get_unchecked_mut(0) = bitmap[index];
-                    *pixel.get_unchecked_mut(1) = bitmap[index + 1];
-                    *pixel.get_unchecked_mut(2) = bitmap[index + 2];
+                    color.blend_pixel(pixel, bitmap[u + v * metrics.width]);
                 },
             );
         });
     }
 
-    // pub fn draw_text(&mut self, x: i32, y: i32, text: &str, color: Color, size: f32, font: &fontdue::Font) {
-    //     let characters = text.chars().collect()
-    //     let (metrics, bitmap) = font.rasterize_subpixel(, size);
-    //     for y in 0..metrics.height {
-    //         for x in (0..metrics.width * 3).step_by(3) {
-    //             let char_r = bitmap[x + y * metrics.width * 3];
-    //             let char_g = bitmap[x + 1 + y * metrics.width * 3];
-    //             let char_b = bitmap[x + 2 + y * metrics.width * 3];
-    //             print!("\x1B[48;2;{};{};{}m   ", char_r, char_g, char_b);
-    //         }
-    //         println!("\x1B[0m");
-    //     }
-    // }
+    pub fn draw_text(
+        &mut self,
+        x: i32,
+        y: i32,
+        text: &str,
+        color: Color,
+        size: f32,
+        fonts: &[fontdue::Font],
+    ) {
+        let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
+        layout.append(fonts, &fontdue::layout::TextStyle::new(text, size, 0));
+        self.draw_layout_text(x, y, &layout, color, fonts);
+    }
 }

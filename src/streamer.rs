@@ -5,7 +5,13 @@ extern crate gstreamer_video as gst_video;
 use crate::renderer::*;
 use gst::{prelude::*, Caps, ElementFactory};
 
-pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
+pub fn stream(
+    width: usize,
+    height: usize,
+    fps: usize,
+    rtmp_uri: &str,
+    mut draw_frame: impl FnMut(&mut Frame) + Send + Sync + 'static,
+) {
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
@@ -102,8 +108,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     // * Link audio
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
-    let mut frame_index = 0;
-    let mut render_time_avg = 0;
+    // * Draw callback
     video_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |appsrc, _| {
@@ -113,28 +118,10 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                     let mut frame =
                         crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
-                    let render_start = std::time::Instant::now(); // ! Profiling
-
-                    // frame.clear(Color::grayscale((frame_index % 255) as _));
-                    frame.fill_rect(
-                        0,
-                        0,
-                        frame.width,
-                        frame.height,
-                        Color::new(255, (frame_index % 255) as _, 0),
-                    );
-
-                    let render_time = render_start.elapsed().as_micros();
-                    render_time_avg += render_time;
-                    println!(
-                        "Frame {frame_index} rendered in {}ms, AVG render time: {}ms",
-                        render_time,
-                        render_time_avg / (frame_index + 1)
-                    );
+                    draw_frame(&mut frame);
                 };
 
                 appsrc.push_buffer(buffer).unwrap();
-                frame_index += 1;
             })
             .build(),
     );

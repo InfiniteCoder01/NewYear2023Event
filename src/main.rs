@@ -36,7 +36,7 @@ fn main() {
             let render_start = std::time::Instant::now(); // ! Profiling
             let uptime = stream_start.elapsed();
 
-            frame.clear(Color::BLACK);
+            // frame.clear(Color::BLACK);
             frame.draw_text(
                 10,
                 10,

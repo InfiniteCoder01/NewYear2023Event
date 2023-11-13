@@ -103,6 +103,7 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     let mut frame_index = 0;
+    let mut render_time_avg = 0;
     video_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |appsrc, _| {
@@ -123,9 +124,12 @@ pub fn stream(width: usize, height: usize, fps: usize, rtmp_uri: &str) {
                         Color::new(255, (frame_index % 255) as _, 0),
                     );
 
+                    let render_time = render_start.elapsed().as_micros();
+                    render_time_avg += render_time;
                     println!(
-                        "Frame {frame_index} rendered in {}us",
-                        render_start.elapsed().as_micros()
+                        "Frame {frame_index} rendered in {}us, AVG render time: {}us",
+                        render_time,
+                        render_time_avg / (frame_index + 1)
                     );
                 };
 

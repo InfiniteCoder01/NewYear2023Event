@@ -30,7 +30,7 @@ fn main() {
         720,
         // 854,
         // 480,
-        30,
+        20,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |frame| {
             let render_start = std::time::Instant::now(); // ! Profiling

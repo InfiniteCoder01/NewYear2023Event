@@ -97,7 +97,7 @@ impl<'a> Frame<'a> {
                 let row = unsafe {
                     std::slice::from_raw_parts_mut(
                         buffer.clone().0.add(index * 3),
-                        (index + width.min(self.width - x)) * 3,
+                        width.min(self.width - x) * 3,
                     )
                 };
                 row.par_chunks_exact_mut(3)

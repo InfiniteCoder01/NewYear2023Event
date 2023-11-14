@@ -55,12 +55,11 @@ pub fn stream(
     // * Source
     let (width, height) = size;
     let video_info =
-        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
+        gst_video::VideoInfo::builder(gst_video::VideoFormat::I420, width as u32, height as u32)
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
     let background = ElementFactory::make("videotestsrc")
-        .property("caps", video_info)
         .property_from_str("pattern", "ball")
         .build()
         .unwrap();
@@ -71,7 +70,8 @@ pub fn stream(
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
-            Caps::builder("video/x-raw").field("format", "I420").build(),
+            // Caps::builder("video/x-raw").field("format", "I420").build(),
+            video_info.to_caps().unwrap(),
         )
         .build()
         .unwrap();

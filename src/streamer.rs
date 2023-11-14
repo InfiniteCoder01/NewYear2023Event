@@ -39,7 +39,8 @@ pub fn stream(
     let video_source = gst_app::AppSrc::builder()
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
-        .format(gst::Format::Time)
+        .block(true)
+        .format(gst::Format::Buffers)
         .build();
 
     // * Convert

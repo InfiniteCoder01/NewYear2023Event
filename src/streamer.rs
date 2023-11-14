@@ -119,6 +119,7 @@ pub fn stream(
     //         .build(),
     // );
     std::thread::spawn(move || loop {
+        println!("Frame");
         let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
         {
             std::thread::sleep(std::time::Duration::from_millis(33));

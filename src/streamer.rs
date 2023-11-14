@@ -110,10 +110,12 @@ pub fn stream(
     video_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |_, _| {
+                println!("Hungry");
                 *hungry_need.0.lock().unwrap() = true;
                 hungry_need.1.notify_one();
             })
             .enough_data(move |_| {
+                println!("Not Hungry");
                 *hungry_enough.0.lock().unwrap() = false;
                 hungry_enough.1.notify_one();
             })

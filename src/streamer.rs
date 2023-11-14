@@ -29,7 +29,7 @@ pub fn stream(
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
 
-    let (enc, parse, cvt) = ("v4l2h264enc", "h264parse", "v4l2convert");
+    let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
 
     // * Source
     let (width, height) = size;
@@ -44,8 +44,8 @@ pub fn stream(
         .do_timestamp(true)
         .format(gst::Format::Time)
         .stream_type(gst_app::AppStreamType::Stream)
-        // .leaky_type(gst_app::AppLeakyType::Upstream)
-        // .max_time(Some(gst::ClockTime::from_mseconds(500)))
+        .leaky_type(gst_app::AppLeakyType::Upstream)
+        .max_time(Some(gst::ClockTime::from_mseconds(500)))
         .build();
 
     // * Convert

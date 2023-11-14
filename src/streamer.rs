@@ -47,7 +47,7 @@ pub fn stream(
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
     let video_queue = ElementFactory::make("queue")
-        .property("leaky", true)
+        .property("leaky", 2)
         .property("max-size-time", 500 * gst::ffi::GST_MSECOND)
         .build()
         .unwrap();

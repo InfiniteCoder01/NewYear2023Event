@@ -104,17 +104,30 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    // video_source.set_callbacks(
-    //     gst_app::AppSrcCallbacks::builder()
-    //         .need_data(move |appsrc, _| {
-
-    //         })
-    //         .build(),
-    // );
+    let hungry_need = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+    let hungry_enough = hungry_need.clone();
+    let hungry_client = hungry_need.clone();
+    video_source.set_callbacks(
+        gst_app::AppSrcCallbacks::builder()
+            .need_data(move |_, _| {
+                *hungry_need.0.lock().unwrap() = true;
+                hungry_need.1.notify_one();
+            })
+            .enough_data(move |_| {
+                *hungry_enough.0.lock().unwrap() = false;
+                hungry_enough.1.notify_one();
+            })
+            .build(),
+    );
     std::thread::spawn(move || loop {
-        println!("Frame start!");
+        let mut started = hungry_client.0.lock().unwrap();
+        while !*started {
+            started = hungry_client.1.wait(started).unwrap();
+        }
+
         let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
         {
+            std::thread::sleep(std::time::Duration::from_millis(33));
             let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
             let mut frame = crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
@@ -122,7 +135,6 @@ pub fn stream(
         };
 
         video_source.push_buffer(buffer).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(33));
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

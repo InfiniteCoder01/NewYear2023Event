@@ -65,8 +65,8 @@ pub fn stream(
         .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
     let caps = gst_video::VideoCapsBuilder::new()
-        .width(width)
-        .height(height)
+        .width(width as _)
+        .height(height as _)
         .build();
     let ovcaps_filter = ElementFactory::make("capsfilter")
         .property("caps", &caps)

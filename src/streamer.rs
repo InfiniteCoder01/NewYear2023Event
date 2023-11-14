@@ -130,7 +130,7 @@ pub fn stream(
         };
 
         video_source.push_buffer(buffer).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::thread::sleep(std::time::Duration::from_millis(10));
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

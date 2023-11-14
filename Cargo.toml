@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gstreamer = "0.21.2"
-gstreamer-app = "0.21.2"
+gstreamer = { version = "0.21.2", features = ["v1_20"] }
+gstreamer-app = { version = "0.21.2", features = ["v1_20"] }
 gstreamer-video = "0.21.2"
 rayon = "1.8.0"
 glib = "0.18.3"

@@ -39,18 +39,15 @@ pub fn stream(
     let video_source = gst_app::AppSrc::builder()
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
-        .block(true)
+        .do_timestamp(true)
         .format(gst::Format::Time)
         .stream_type(gst_app::AppStreamType::Stream)
+        .leaky_type(gst_app::AppLeakyType::Upstream)
+        .max_time(Some(gst::ClockTime::from_mseconds(500)))
         .build();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
-    let video_queue = ElementFactory::make("queue")
-        .property("leaky", 2)
-        .property("max-size-time", 500 * gst::ffi::GST_MSECOND)
-        .build()
-        .unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -85,7 +82,6 @@ pub fn stream(
         .add_many([
             video_source.upcast_ref(),
             &videoconvert,
-            &video_queue,
             &caps_filter,
             &video_encoder,
             &video_decoder,
@@ -100,7 +96,6 @@ pub fn stream(
     gst::Element::link_many([
         video_source.upcast_ref(),
         &videoconvert,
-        &video_queue,
         &caps_filter,
         &video_encoder,
         &video_decoder,

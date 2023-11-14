@@ -14,7 +14,7 @@ pub fn stream(
 ) {
     // let pipeline_str = format!(
     //     concat!(
-    //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! queue ! ",
+    //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
     //         "v4l2convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
@@ -45,12 +45,6 @@ pub fn stream(
         // .leaky_type(gst_app::AppLeakyType::Upstream)
         // .max_time(Some(gst::ClockTime::from_mseconds(500)))
         .build();
-
-    let video_queue = gst::ElementFactory::make("queue")
-        .property_from_str("leaky", "2")
-        .property("max-size-time", (500 * gst::ffi::GST_MSECOND) as u64)
-        .build()
-        .unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
@@ -87,7 +81,6 @@ pub fn stream(
     pipeline
         .add_many([
             video_source.upcast_ref(),
-            &video_queue,
             &videoconvert,
             &caps_filter,
             &video_encoder,
@@ -102,7 +95,6 @@ pub fn stream(
     // * Link video
     gst::Element::link_many([
         video_source.upcast_ref(),
-        &video_queue,
         &videoconvert,
         &caps_filter,
         &video_encoder,

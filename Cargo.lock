@@ -558,6 +558,7 @@ dependencies = [
  "glib",
  "gstreamer",
  "gstreamer-app",
+ "gstreamer-base",
  "gstreamer-video",
  "hhmmss",
  "rayon",

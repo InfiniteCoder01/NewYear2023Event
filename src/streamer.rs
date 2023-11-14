@@ -38,15 +38,16 @@ pub fn stream(
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
-    let video_source = gst_app::AppSrc::builder()
-        .caps(&video_info.to_caps().unwrap())
-        .is_live(true)
-        .do_timestamp(true)
-        .format(gst::Format::Time)
-        .stream_type(gst_app::AppStreamType::Stream)
-        .leaky_type(gst_app::AppLeakyType::Upstream)
-        .max_time(Some(gst::ClockTime::from_mseconds(500)))
-        .build();
+    // let video_source = gst_app::AppSrc::builder()
+    //     .caps(&video_info.to_caps().unwrap())
+    //     .is_live(true)
+    //     .do_timestamp(true)
+    //     .format(gst::Format::Time)
+    //     .stream_type(gst_app::AppStreamType::Stream)
+    //     .leaky_type(gst_app::AppLeakyType::Upstream)
+    //     .max_time(Some(gst::ClockTime::from_mseconds(500)))
+    //     .build();
+    let video_source = ElementFactory::make("gltestsrc").build().unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make(cvt).build().unwrap();
@@ -134,7 +135,7 @@ pub fn stream(
             draw_frame(&mut frame);
         };
 
-        video_source.push_buffer(buffer).unwrap();
+        // video_source.push_buffer(buffer).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(10));
     });
 

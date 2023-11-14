@@ -40,7 +40,8 @@ pub fn stream(
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
         .block(true)
-        .format(gst::Format::Bytes)
+        .format(gst::Format::Percent)
+        .stream_type(gst_app::AppStreamType::Stream)
         .build();
 
     // * Convert

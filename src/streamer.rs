@@ -104,29 +104,21 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    let hungry_need = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
-    let hungry_enough = hungry_need.clone();
-    let hungry_client = hungry_need.clone();
-    video_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(move |_, _| {
-                println!("Hungry");
-                *hungry_need.0.lock().unwrap() = true;
-                hungry_need.1.notify_one();
-            })
-            .enough_data(move |_| {
-                println!("Not Hungry");
-                *hungry_enough.0.lock().unwrap() = false;
-                hungry_enough.1.notify_one();
-            })
-            .build(),
-    );
+    // video_source.set_callbacks(
+    //     gst_app::AppSrcCallbacks::builder()
+    //         .need_data(move |_, _| {
+    //             println!("Hungry");
+    //             *hungry_need.0.lock().unwrap() = true;
+    //             hungry_need.1.notify_one();
+    //         })
+    //         .enough_data(move |_| {
+    //             println!("Not Hungry");
+    //             *hungry_enough.0.lock().unwrap() = false;
+    //             hungry_enough.1.notify_one();
+    //         })
+    //         .build(),
+    // );
     std::thread::spawn(move || loop {
-        let mut started = hungry_client.0.lock().unwrap();
-        while !*started {
-            started = hungry_client.1.wait(started).unwrap();
-        }
-
         let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
         {
             std::thread::sleep(std::time::Duration::from_millis(33));
@@ -137,6 +129,7 @@ pub fn stream(
         };
 
         video_source.push_buffer(buffer).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

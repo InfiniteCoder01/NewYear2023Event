@@ -55,7 +55,7 @@ pub fn stream(
     // * Source
     let (width, height) = size;
     let video_info =
-        gst_video::VideoInfo::builder(gst_video::VideoFormat::I420, width as u32, height as u32)
+        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
@@ -64,14 +64,17 @@ pub fn stream(
         .build()
         .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
+    let ovcaps_filter = ElementFactory::make("capsfilter")
+        .property("caps", video_info.to_caps().unwrap())
+        .build()
+        .unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make(cvt).build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
-            // Caps::builder("video/x-raw").field("format", "I420").build(),
-            video_info.to_caps().unwrap(),
+            Caps::builder("video/x-raw").field("format", "I420").build(),
         )
         .build()
         .unwrap();
@@ -102,6 +105,7 @@ pub fn stream(
         .add_many([
             &background,
             &video_overlay,
+            &ovcaps_filter,
             &videoconvert,
             &caps_filter,
             &video_encoder,
@@ -117,6 +121,7 @@ pub fn stream(
     gst::Element::link_many([
         &background,
         &video_overlay,
+        &ovcaps_filter,
         &videoconvert,
         &caps_filter,
         &video_encoder,

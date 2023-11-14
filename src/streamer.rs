@@ -43,7 +43,7 @@ pub fn stream(
     //     .format(gst::Format::Time)
     //     .stream_type(gst_app::AppStreamType::Stream)
     //     .build();
-    let video_source = ElementFactory::make("playbin").property("uri", "file:///home/infinitecoder/home/events/new-year-2024/sample.mp4").build().unwrap();
+    let video_source = ElementFactory::make("filesrc").property("location", "sample.mp4").build().unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();

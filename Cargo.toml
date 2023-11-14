@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 gstreamer = { version = "0.21.2" }
-gstreamer-app = { version = "0.21.2" }
+gstreamer-base = "0.21.2"
+gstreamer-app = { version = "0.21.2", features = ["v1_20"] }
 gstreamer-video = "0.21.2"
+
 rayon = "1.8.0"
 glib = "0.18.3"
 
@@ -15,4 +17,7 @@ toml = "0.8.6"
 
 fontdue = { version = "0.7.3", features = ["parallel", "rayon"] }
 hhmmss = "0.1.0"
-gstreamer-base = "0.21.2"
+
+pangocairo = "0.18.0"
+pango = "0.18.3"
+cairo-rs = "0.18.3"

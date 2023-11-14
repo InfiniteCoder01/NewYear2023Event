@@ -4,6 +4,27 @@ extern crate gstreamer_video as gst_video;
 
 use crate::renderer::*;
 use gst::{prelude::*, Caps, ElementFactory};
+use pango::prelude::FontMapExt;
+
+struct DrawingContext {
+    layout: LayoutWrapper,
+    info: Option<gst_video::VideoInfo>,
+}
+
+#[derive(Debug)]
+struct LayoutWrapper(pango::Layout);
+
+impl std::ops::Deref for LayoutWrapper {
+    type Target = pango::Layout;
+
+    fn deref(&self) -> &pango::Layout {
+        assert_eq!(self.0.ref_count(), 1);
+        &self.0
+    }
+}
+
+// SAFETY: We ensure that there are never multiple references to the layout.
+unsafe impl Send for LayoutWrapper {}
 
 pub fn stream(
     size: (usize, usize),
@@ -38,16 +59,12 @@ pub fn stream(
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
-    // let video_source = gst_app::AppSrc::builder()
-    //     .caps(&video_info.to_caps().unwrap())
-    //     .is_live(true)
-    //     .do_timestamp(true)
-    //     .format(gst::Format::Time)
-    //     .stream_type(gst_app::AppStreamType::Stream)
-    //     .leaky_type(gst_app::AppLeakyType::Upstream)
-    //     .max_time(Some(gst::ClockTime::from_mseconds(500)))
-    //     .build();
-    let video_source = ElementFactory::make("gltestsrc").build().unwrap();
+    let background = ElementFactory::make("videotestsrc")
+        .property("caps", video_info)
+        .property_from_str("pattern", "ball")
+        .build()
+        .unwrap();
+    let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make(cvt).build().unwrap();
@@ -83,7 +100,8 @@ pub fn stream(
     // * Add
     pipeline
         .add_many([
-            video_source.upcast_ref(),
+            &background,
+            &video_overlay,
             &videoconvert,
             &caps_filter,
             &video_encoder,
@@ -97,7 +115,8 @@ pub fn stream(
 
     // * Link video
     gst::Element::link_many([
-        video_source.upcast_ref(),
+        &background,
+        &video_overlay,
         &videoconvert,
         &caps_filter,
         &video_encoder,
@@ -111,32 +130,91 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    // video_source.set_callbacks(
-    //     gst_app::AppSrcCallbacks::builder()
-    //         .need_data(move |_, _| {
-    //             println!("Hungry");
-    //             *hungry_need.0.lock().unwrap() = true;
-    //             hungry_need.1.notify_one();
-    //         })
-    //         .enough_data(move |_| {
-    //             println!("Not Hungry");
-    //             *hungry_enough.0.lock().unwrap() = false;
-    //             hungry_enough.1.notify_one();
-    //         })
-    //         .build(),
-    // );
-    std::thread::spawn(move || loop {
-        println!("Frame");
-        let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
-        {
-            let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
-            let mut frame = crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
+    let fontmap = pangocairo::FontMap::new();
+    let context = fontmap.create_context();
+    let layout = LayoutWrapper(pango::Layout::new(&context));
+    let font_desc = pango::FontDescription::from_string("Sans Bold 26");
+    layout.set_font_description(Some(&font_desc));
+    layout.set_text("GStreamer");
+    let drawer = std::sync::Arc::new(std::sync::Mutex::new(DrawingContext { layout, info: None }));
+    let drawer_clone = drawer.clone();
+    video_overlay.connect("draw", false, move |args| {
+        use std::f64::consts::PI;
 
-            draw_frame(&mut frame);
-        };
+        let drawer = &drawer_clone;
+        let drawer = drawer.lock().unwrap();
 
-        // video_source.push_buffer(buffer).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // Get the signal's arguments
+        let _overlay = args[0].get::<gst::Element>().unwrap();
+        // This is the cairo context. This is the root of all of cairo's
+        // drawing functionality.
+        let cr = args[1].get::<cairo::Context>().unwrap();
+        let timestamp = args[2].get::<gst::ClockTime>().unwrap();
+        let _duration = args[3].get::<gst::ClockTime>().unwrap();
+
+        let info = drawer.info.as_ref().unwrap();
+        let layout = &drawer.layout;
+
+        let angle = 2.0 * PI * (timestamp % (10 * gst::ClockTime::SECOND)).nseconds() as f64
+            / (10.0 * gst::ClockTime::SECOND.nseconds() as f64);
+
+        // The image we draw (the text) will be static, but we will change the
+        // transformation on the drawing context, which rotates and shifts everything
+        // that we draw afterwards. Like this, we have no complicated calculations
+        // in the actual drawing below.
+        // Calling multiple transformation methods after each other will apply the
+        // new transformation on top. If you repeat the cr.rotate(angle) line below
+        // this a second time, everything in the canvas will rotate twice as fast.
+        cr.translate(
+            f64::from(info.width()) / 2.0,
+            f64::from(info.height()) / 2.0,
+        );
+        cr.rotate(angle);
+
+        // This loop will render 10 times the string "GStreamer" in a circle
+        for i in 0..10 {
+            // Cairo, like most rendering frameworks, is using a stack for transformations
+            // with this, we push our current transformation onto this stack - allowing us
+            // to make temporary changes / render something / and then returning to the
+            // previous transformations.
+            cr.save().expect("Failed to save state");
+
+            let angle = (360. * f64::from(i)) / 10.0;
+            let red = (1.0 + f64::cos((angle - 60.0) * PI / 180.0)) / 2.0;
+            cr.set_source_rgb(red, 0.0, 1.0 - red);
+            cr.rotate(angle * PI / 180.0);
+
+            // Update the text layout. This function is only updating pango's internal state.
+            // So e.g. that after a 90 degree rotation it knows that what was previously going
+            // to end up as a 200x100 rectangle would now be 100x200.
+            pangocairo::functions::update_layout(&cr, layout);
+            let (width, _height) = layout.size();
+            // Using width and height of the text, we can properly position it within
+            // our canvas.
+            cr.move_to(
+                -(f64::from(width) / f64::from(pango::SCALE)) / 2.0,
+                -(f64::from(info.height())) / 2.0,
+            );
+            // After telling the layout object where to draw itself, we actually tell
+            // it to draw itself into our cairo context.
+            pangocairo::functions::show_layout(&cr, layout);
+
+            // Here we go one step up in our stack of transformations, removing any
+            // changes we did to them since the last call to cr.save();
+            cr.restore().expect("Failed to restore state");
+        }
+
+        None
+    });
+
+    video_overlay.connect("caps-changed", false, move |args| {
+        let _overlay = args[0].get::<gst::Element>().unwrap();
+        let caps = args[1].get::<gst::Caps>().unwrap();
+
+        let mut drawer = drawer.lock().unwrap();
+        drawer.info = Some(gst_video::VideoInfo::from_caps(&caps).unwrap());
+
+        None
     });
 
     pipeline.set_state(gst::State::Playing).unwrap();

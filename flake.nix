@@ -30,6 +30,7 @@
               # Support the Video Audio (Hardware) Acceleration API
               gst_all_1.gst-vaapi
 
+              pango
               cairo
             ];
           };

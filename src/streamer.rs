@@ -15,7 +15,7 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "v4l2convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "v4l2convert ! queue ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
@@ -36,17 +36,21 @@ pub fn stream(
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
-    // let video_source = gst_app::AppSrc::builder()
-    //     .caps(&video_info.to_caps().unwrap())
-    //     .is_live(true)
-    //     .block(true)
-    //     .format(gst::Format::Time)
-    //     .stream_type(gst_app::AppStreamType::Stream)
-    //     .build();
-    let video_source = ElementFactory::make("filesrc").property("location", "sample.mp4").build().unwrap();
+    let video_source = gst_app::AppSrc::builder()
+        .caps(&video_info.to_caps().unwrap())
+        .is_live(true)
+        .block(true)
+        .format(gst::Format::Time)
+        .stream_type(gst_app::AppStreamType::Stream)
+        .build();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
+    let video_queue = ElementFactory::make("queue")
+        .property("leaky", true)
+        .property("max-size-time", 500 * gst::ffi::GST_MSECOND)
+        .build()
+        .unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -81,6 +85,7 @@ pub fn stream(
         .add_many([
             video_source.upcast_ref(),
             &videoconvert,
+            &video_queue,
             &caps_filter,
             &video_encoder,
             &video_decoder,
@@ -95,6 +100,7 @@ pub fn stream(
     gst::Element::link_many([
         video_source.upcast_ref(),
         &videoconvert,
+        &video_queue,
         &caps_filter,
         &video_encoder,
         &video_decoder,
@@ -125,14 +131,13 @@ pub fn stream(
         println!("Frame");
         let mut buffer = gst::Buffer::with_size(video_info.size()).unwrap();
         {
-            std::thread::sleep(std::time::Duration::from_millis(33));
             let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
             let mut frame = crate::renderer::Frame::new(buffer.as_mut_slice(), width, height);
 
             draw_frame(&mut frame);
         };
 
-        // video_source.push_buffer(buffer).unwrap();
+        video_source.push_buffer(buffer).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(10));
     });
 

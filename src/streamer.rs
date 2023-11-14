@@ -54,18 +54,22 @@ pub fn stream(
 
     // * Source
     let (width, height) = size;
-    let video_info =
-        gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
-            .fps(gst::Fraction::new(fps as _, 1))
-            .build()
-            .unwrap();
+    // let video_info =
+    //     gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
+    //         .fps(gst::Fraction::new(fps as _, 1))
+    //         .build()
+    //         .unwrap();
     let background = ElementFactory::make("videotestsrc")
         .property_from_str("pattern", "ball")
         .build()
         .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
+    let caps = gst_video::VideoCapsBuilder::new()
+        .width(width)
+        .height(height)
+        .build();
     let ovcaps_filter = ElementFactory::make("capsfilter")
-        .property("caps", video_info.to_caps().unwrap())
+        .property("caps", &caps)
         .build()
         .unwrap();
 

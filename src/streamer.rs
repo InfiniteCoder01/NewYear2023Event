@@ -45,7 +45,7 @@ pub fn stream(
         .format(gst::Format::Time)
         .stream_type(gst_app::AppStreamType::Stream)
         // .leaky_type(gst_app::AppLeakyType::Upstream)
-        .max_time(Some(gst::ClockTime::from_mseconds(500)))
+        // .max_time(Some(gst::ClockTime::from_mseconds(500)))
         .build();
 
     // * Convert

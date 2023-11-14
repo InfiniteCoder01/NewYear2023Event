@@ -15,7 +15,7 @@ pub fn stream(
     // let pipeline_str = format!(
     //     concat!(
     //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
-    //         "v4l2convert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
@@ -28,6 +28,8 @@ pub fn stream(
 
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
+
+    let (enc, parse, cvt) = ("v4l2h264enc", "h264parse", "v4l2convert");
 
     // * Source
     let (width, height) = size;
@@ -47,7 +49,7 @@ pub fn stream(
         .build();
 
     // * Convert
-    let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
+    let videoconvert = ElementFactory::make(cvt).build().unwrap();
     let caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -55,8 +57,8 @@ pub fn stream(
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make("x264enc").build().unwrap();
-    let video_decoder = ElementFactory::make("h264parse").build().unwrap();
+    let video_encoder = ElementFactory::make(enc).build().unwrap();
+    let video_decoder = ElementFactory::make(parse).build().unwrap();
 
     // * Mux
     let mux = ElementFactory::make("flvmux")

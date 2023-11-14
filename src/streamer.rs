@@ -48,7 +48,7 @@ pub fn stream(
 
     let video_queue = gst::ElementFactory::make("queue")
         .property_from_str("leaky", "2")
-        .property("max-size-time", (500 * gst::ffi::GST_MSECOND) as u32)
+        .property("max-size-time", (500 * gst::ffi::GST_MSECOND) as u64)
         .build()
         .unwrap();
 

@@ -40,7 +40,7 @@ pub fn stream(
         .caps(&video_info.to_caps().unwrap())
         .is_live(true)
         .block(true)
-        .format(gst::Format::Buffers)
+        .format(gst::Format::Bytes)
         .build();
 
     // * Convert

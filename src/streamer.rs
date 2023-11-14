@@ -36,13 +36,14 @@ pub fn stream(
             .fps(gst::Fraction::new(fps as _, 1))
             .build()
             .unwrap();
-    let video_source = gst_app::AppSrc::builder()
-        .caps(&video_info.to_caps().unwrap())
-        .is_live(true)
-        .block(true)
-        .format(gst::Format::Time)
-        .stream_type(gst_app::AppStreamType::Stream)
-        .build();
+    // let video_source = gst_app::AppSrc::builder()
+    //     .caps(&video_info.to_caps().unwrap())
+    //     .is_live(true)
+    //     .block(true)
+    //     .format(gst::Format::Time)
+    //     .stream_type(gst_app::AppStreamType::Stream)
+    //     .build();
+    let video_source = ElementFactory::make("playbin2").property("uri", "file:///sample.mp4").build().unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make("v4l2convert").build().unwrap();
@@ -131,7 +132,7 @@ pub fn stream(
             draw_frame(&mut frame);
         };
 
-        video_source.push_buffer(buffer).unwrap();
+        // video_source.push_buffer(buffer).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(10));
     });
 

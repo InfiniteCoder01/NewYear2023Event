@@ -89,16 +89,13 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            // &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S32be, 44100, 2)
-            //     .build()
-            //     .unwrap()
-            //     .to_caps()
-            //     .unwrap(),
-            &Caps::from_str(
-                "audio/x-raw-float,width=32,depth=32,endianness=1234,rate=44100,channels=2",
-            )
-            .unwrap(),
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 44100, 2)
+                .build()
+                .unwrap()
+                .to_caps()
+                .unwrap(),
         )
+        .format(gst::Format::Time)
         .build();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)

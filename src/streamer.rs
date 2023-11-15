@@ -7,6 +7,7 @@ use gst::{prelude::*, Caps, ElementFactory};
 pub fn stream<F>(
     size: (usize, usize),
     fps: usize,
+    video_bitrate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
     mut draw_frame: F,
@@ -61,7 +62,7 @@ pub fn stream<F>(
         .build()
         .unwrap();
     let video_encoder = ElementFactory::make(enc)
-        .property("bitrate", 2500_u32)
+        .property("bitrate", video_bitrate as _)
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();

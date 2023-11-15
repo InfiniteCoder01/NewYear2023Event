@@ -21,6 +21,7 @@ fn main() {
         (1280, 720),
         // (640, 480),
         60,
+        7500,
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {

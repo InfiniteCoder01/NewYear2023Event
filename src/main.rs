@@ -36,13 +36,20 @@ fn main() {
             );
             context.set_font_size(20.0);
             context.move_to(20.0, 30.0);
+            context.show_text(&format!("Frame {frame_index}",)).unwrap();
+            context
+                .show_text(&format!("Uptime: {}", uptime.hhmmssxxx(),))
+                .unwrap();
+            context.rel_move_to(0.0, 20.0);
+            context
+                .show_text(&format!("Rendered in {}ms", frame_time.as_millis(),))
+                .unwrap();
+            context.rel_move_to(0.0, 20.0);
             context
                 .show_text(&format!(
-                "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nFramerate: {:.2}",
-                uptime.hhmmssxxx(),
-                frame_time.as_millis(),
-                1_000_000.0 / frame_time.as_micros() as f32,
-            ))
+                    "Framerate: {:.2}",
+                    1_000_000.0 / frame_time.as_micros() as f32,
+                ))
                 .unwrap();
 
             context.set_source_rgb(1.0, 0.0, 0.0);

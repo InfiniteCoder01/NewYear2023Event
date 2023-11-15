@@ -54,7 +54,10 @@ where
         )
         .build()
         .unwrap();
-    let video_encoder = ElementFactory::make(enc).build().unwrap();
+    let video_encoder = ElementFactory::make(enc)
+        .property("key-int-max", 30_u32)
+        .build()
+        .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();
 
     // * Mux

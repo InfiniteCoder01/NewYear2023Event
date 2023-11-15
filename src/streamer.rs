@@ -3,8 +3,6 @@ extern crate gstreamer_app as gst_app;
 extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
-use std::str::FromStr;
-
 use gst::{prelude::*, Caps, ElementFactory};
 use rand::Rng;
 
@@ -161,8 +159,8 @@ pub fn stream<F>(
     // * Audio callback
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
-            .need_data(|src, _| {
-                let mut buffer = gst::Buffer::with_size(1024).unwrap();
+            .need_data(|src, length| {
+                let mut buffer = gst::Buffer::with_size(length as _).unwrap();
                 {
                     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
                     let data = buffer.as_mut_slice();

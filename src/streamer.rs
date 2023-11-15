@@ -4,8 +4,13 @@ extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
 
-pub fn stream<F>(size: (usize, usize), audio_bitrate: usize, rtmp_uri: &str, mut draw_frame: F)
-where
+pub fn stream<F>(
+    size: (usize, usize),
+    fps: usize,
+    audio_bitrate: usize,
+    rtmp_uri: &str,
+    mut draw_frame: F,
+) where
     F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {
     // let pipeline_str = format!(
@@ -40,7 +45,7 @@ where
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
-                .framerate(gst::Fraction::new(60, 1))
+                .framerate(gst::Fraction::new(fps as _, 1))
                 .build(),
         )
         .build()

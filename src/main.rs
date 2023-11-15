@@ -18,10 +18,10 @@ fn main() {
     let mut frame_times = [0u128; 30];
     streamer::stream(
         // (1920, 1080),
-        // (1280, 720),
-        (640, 480),
-        // 128000,
-        24000,
+        (1280, 720),
+        // (640, 480),
+        60,
+        128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {
             let frame_time = last_frame.elapsed();

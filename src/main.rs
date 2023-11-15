@@ -51,6 +51,7 @@ fn main() {
                 100.0,
                 100.0,
             );
+            context.fill();
 
             last_render_time = render_start.elapsed().as_micros();
             frame_index += 1;

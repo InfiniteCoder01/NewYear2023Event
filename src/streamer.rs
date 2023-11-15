@@ -161,18 +161,31 @@ pub fn stream<F>(
         gst_app::AppSrcCallbacks::builder()
             .need_data(|src, length| {
                 let mut buffer = gst::Buffer::with_size(length as _).unwrap();
-                // {
-                //     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
-                //     let data = buffer.as_mut_slice();
-                //     for sample in data.chunks_exact_mut(4) {
-                //         sample.clone_from_slice(
-                //             &rand::thread_rng()
-                //                 .gen_range::<f32, _>(-1.0..1.0)
-                //                 .to_be_bytes(),
-                //         )
-                //     }
-                // }
-                src.push_buffer(buffer).unwrap();
+                {
+                    let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
+                    let data = buffer.as_mut_slice();
+                    for sample in data.chunks_exact_mut(4) {
+                        sample.clone_from_slice(
+                            &rand::thread_rng()
+                                .gen_range::<f32, _>(-1.0..1.0)
+                                .to_be_bytes(),
+                        )
+                    }
+                }
+                src.push_sample(
+                    &gst::Sample::builder()
+                        .caps(
+                            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 16000, 1)
+                                .build()
+                                .unwrap()
+                                .to_caps()
+                                .unwrap(),
+                        )
+                        .buffer(&buffer)
+                        .build(),
+                )
+                .unwrap();
+                // src.push_buffer(buffer).unwrap();
             })
             .build(),
     );

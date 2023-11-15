@@ -62,7 +62,7 @@ pub fn stream<F>(
         .build()
         .unwrap();
     let video_encoder = ElementFactory::make(enc)
-        .property("bitrate", video_bitrate as _)
+        .property("bitrate", video_bitrate as u32)
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();

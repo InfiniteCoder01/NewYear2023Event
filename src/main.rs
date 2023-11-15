@@ -14,7 +14,7 @@ fn main() {
 
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
-    let mut last_render_time = 0;
+    let mut last_frame = std::time::Instant::now();
     streamer::stream(
         // (1920, 1080),
         (1280, 720),
@@ -24,7 +24,8 @@ fn main() {
         24000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {
-            let render_start = std::time::Instant::now();
+            let frame_time = last_frame.elapsed();
+            last_frame = std::time::Instant::now();
             let uptime = stream_start.elapsed();
 
             context.set_source_rgb(1.0, 1.0, 1.0);
@@ -37,10 +38,10 @@ fn main() {
             context.move_to(20.0, 30.0);
             context
                 .show_text(&format!(
-                "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nMax possible framerate: {:.2}",
+                "Frame {frame_index}\nUptime: {}\nRendered in {}ms\nFramerate: {:.2}",
                 uptime.hhmmssxxx(),
-                last_render_time / 1000,
-                1_000_000.0 / last_render_time as f32,
+                frame_time.as_millis(),
+                1_000_000.0 / frame_time.as_micros() as f32,
             ))
                 .unwrap();
 
@@ -53,7 +54,6 @@ fn main() {
             );
             context.fill().unwrap();
 
-            last_render_time = render_start.elapsed().as_micros();
             frame_index += 1;
         },
     );

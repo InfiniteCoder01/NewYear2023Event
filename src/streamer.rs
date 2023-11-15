@@ -94,9 +94,10 @@ pub fn stream<F>(
             //     .unwrap()
             //     .to_caps()
             //     .unwrap(),
-            Caps::from_str(
+            &Caps::from_str(
                 "audio/x-raw-float,width=32,depth=32,endianness=1234,rate=44100,channels=2",
-            ),
+            )
+            .unwrap(),
         )
         .build();
     let audio_encoder = ElementFactory::make("voaacenc")

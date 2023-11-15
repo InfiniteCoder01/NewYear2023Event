@@ -4,27 +4,6 @@ extern crate gstreamer_video as gst_video;
 
 use crate::renderer::*;
 use gst::{prelude::*, Caps, ElementFactory};
-use pango::prelude::FontMapExt;
-
-struct DrawingContext {
-    layout: LayoutWrapper,
-    info: Option<gst_video::VideoInfo>,
-}
-
-#[derive(Debug)]
-struct LayoutWrapper(pango::Layout);
-
-impl std::ops::Deref for LayoutWrapper {
-    type Target = pango::Layout;
-
-    fn deref(&self) -> &pango::Layout {
-        assert_eq!(self.0.ref_count(), 1);
-        &self.0
-    }
-}
-
-// SAFETY: We ensure that there are never multiple references to the layout.
-unsafe impl Send for LayoutWrapper {}
 
 pub fn stream(
     size: (usize, usize),
@@ -135,22 +114,22 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    // let fontmap = pangocairo::FontMap::new();
-    // let context = fontmap.create_context();
-    // let layout = LayoutWrapper(pango::Layout::new(&context));
-    // let font_desc = pango::FontDescription::from_string("Sans Bold 26");
-    // layout.set_font_description(Some(&font_desc));
-    // layout.set_text("GStreamer");
-    // let drawer = std::sync::Arc::new(std::sync::Mutex::new(DrawingContext { layout, info: None }));
-    // let drawer_clone = drawer.clone();
     video_overlay.connect("draw", false, move |args| {
         // let drawer = &drawer_clone;
         // let drawer = drawer.lock().unwrap();
 
         let cr = args[1].get::<cairo::Context>().unwrap();
-        let timestamp = args[2].get::<gst::ClockTime>().unwrap();
+        // let timestamp = args[2].get::<gst::ClockTime>().unwrap();
 
-        cr.show_text("Hello, world!");
+        cr.set_source_rgb(1.0, 1.0, 1.0);
+        cr.select_font_face(
+            "Purisa",
+            cairo::FontSlant::Normal,
+            cairo::FontWeight::Normal,
+        );
+        cr.set_font_size(13.0);
+        cr.move_to(20.0, 30.0);
+        cr.show_text("Hello, world!").unwrap();
 
         // let info = drawer.info.as_ref().unwrap();
         // let layout = &drawer.layout;

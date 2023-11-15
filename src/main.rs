@@ -17,8 +17,8 @@ fn main() {
     let mut last_frame = std::time::Instant::now();
     streamer::stream(
         // (1920, 1080),
-        (1280, 720),
-        // (854, 480),
+        // (1280, 720),
+        (854, 480),
 
         // 128000,
         24000,
@@ -40,11 +40,11 @@ fn main() {
             context
                 .show_text(&format!("Uptime: {}", uptime.hhmmssxxx(),))
                 .unwrap();
-            context.rel_move_to(0.0, 20.0);
+            context.move_to(20.0, 50.0);
             context
                 .show_text(&format!("Rendered in {}ms", frame_time.as_millis(),))
                 .unwrap();
-            context.rel_move_to(0.0, 20.0);
+            context.move_to(20.0, 700.0);
             context
                 .show_text(&format!(
                     "Framerate: {:.2}",
@@ -52,7 +52,7 @@ fn main() {
                 ))
                 .unwrap();
 
-            context.set_source_rgb(1.0, 0.0, 0.0);
+            context.set_source_rgb(0.0, 0.0, 1.0);
             context.rectangle(
                 width / 2.0 + uptime.as_secs_f64().sin() * 100.0 - 50.0,
                 height / 2.0 - 50.0,

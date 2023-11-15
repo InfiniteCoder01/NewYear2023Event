@@ -64,6 +64,7 @@ pub fn stream<F>(
     let video_encoder = ElementFactory::make(enc)
         .property("key-int-max", 30_u32)
         .property("bitrate", video_bitrate as u32)
+        .property_from_str("speed-preset", "ultrafast")
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();

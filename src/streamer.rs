@@ -40,6 +40,7 @@ where
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
+                .framerate(gst::Fraction::new(60, 1))
                 .build(),
         )
         .build()

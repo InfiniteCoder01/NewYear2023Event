@@ -87,7 +87,7 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 44100, 2)
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S32be, 44100, 2)
                 .build()
                 .unwrap()
                 .to_caps()
@@ -164,11 +164,15 @@ pub fn stream<F>(
                     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
                     let data = buffer.as_mut_slice();
                     for sample in data.chunks_exact_mut(4) {
-                        sample.clone_from_slice(
-                            &rand::thread_rng()
-                                .gen_range::<f32, _>(-1.0..1.0)
-                                .to_le_bytes(),
-                        )
+                        sample[0] = 0;
+                        sample[1] = 0;
+                        sample[2] = 0;
+                        sample[3] = 0;
+                        // sample.clone_from_slice(
+                        // &rand::thread_rng()
+                        //     .gen_range::<f32, _>(-1.0..1.0)
+                        //     .to_be_bytes(),
+                        // )
                     }
                 }
                 src.push_buffer(buffer).unwrap();

@@ -3,6 +3,8 @@ extern crate gstreamer_app as gst_app;
 extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
+use std::str::FromStr;
+
 use gst::{prelude::*, Caps, ElementFactory};
 use rand::Rng;
 
@@ -87,11 +89,14 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S32be, 44100, 2)
-                .build()
-                .unwrap()
-                .to_caps()
-                .unwrap(),
+            // &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S32be, 44100, 2)
+            //     .build()
+            //     .unwrap()
+            //     .to_caps()
+            //     .unwrap(),
+            Caps::from_str(
+                "audio/x-raw-float,width=32,depth=32,endianness=1234,rate=44100,channels=2",
+            ),
         )
         .build();
     let audio_encoder = ElementFactory::make("voaacenc")
@@ -164,15 +169,11 @@ pub fn stream<F>(
                     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
                     let data = buffer.as_mut_slice();
                     for sample in data.chunks_exact_mut(4) {
-                        sample[0] = 0;
-                        sample[1] = 0;
-                        sample[2] = 0;
-                        sample[3] = 0;
-                        // sample.clone_from_slice(
-                        // &rand::thread_rng()
-                        //     .gen_range::<f32, _>(-1.0..1.0)
-                        //     .to_be_bytes(),
-                        // )
+                        sample.clone_from_slice(
+                            &rand::thread_rng()
+                                .gen_range::<f32, _>(-1.0..1.0)
+                                .to_be_bytes(),
+                        )
                     }
                 }
                 src.push_buffer(buffer).unwrap();

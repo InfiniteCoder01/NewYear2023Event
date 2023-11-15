@@ -152,7 +152,7 @@ pub fn stream<F>(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!("{}", err);
+                panic!("Element {:?}:\n{}", err.src(), err);
             }
             _ => (),
         }

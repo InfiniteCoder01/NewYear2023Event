@@ -15,7 +15,7 @@ fn main() {
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
     let mut last_frame = std::time::Instant::now();
-    let mut frame_times = [0u128; 8];
+    let mut frame_times = [0u128; 30];
     streamer::stream(
         // (1920, 1080),
         // (1280, 720),
@@ -45,7 +45,7 @@ fn main() {
                 .unwrap();
             context.move_to(20.0, 70.0);
             context
-                .show_text(&format!("Rendered in {}ms", frame_time / 1000))
+                .show_text(&format!("Frame time is {}ms", frame_time / 1000))
                 .unwrap();
             context.move_to(20.0, 90.0);
             context
@@ -55,7 +55,7 @@ fn main() {
                 ))
                 .unwrap();
 
-            context.set_source_rgb(1.0, 0.0, 0.0);
+            context.set_source_rgb(0.0, 0.0, 1.0);
             context.rectangle(
                 width / 2.0 + uptime.as_secs_f64().sin() * 100.0 - 50.0,
                 height / 2.0 - 50.0,

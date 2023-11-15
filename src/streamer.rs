@@ -28,14 +28,13 @@ unsafe impl Send for LayoutWrapper {}
 
 pub fn stream(
     size: (usize, usize),
-    fps: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
     mut draw_frame: impl FnMut(&mut Frame) + Send + Sync + 'static,
 ) {
     // let pipeline_str = format!(
     //     concat!(
-    //         "appsrc caps=\"video/x-raw,format=RGB,width={},height={},framerate={}/1\" name=appsrc0 ! ",
+    //         "cairooverlay ! ",
     //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
@@ -59,10 +58,10 @@ pub fn stream(
     //         .fps(gst::Fraction::new(fps as _, 1))
     //         .build()
     //         .unwrap();
-    let background = ElementFactory::make("videotestsrc")
-        .property_from_str("pattern", "ball")
-        .build()
-        .unwrap();
+    // let background = ElementFactory::make("videotestsrc")
+    //     .property_from_str("pattern", "ball")
+    //     .build()
+    //     .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
     let caps = gst_video::VideoCapsBuilder::new()
         .width(width as _)
@@ -107,7 +106,7 @@ pub fn stream(
     // * Add
     pipeline
         .add_many([
-            &background,
+            // &background,
             &video_overlay,
             &ovcaps_filter,
             &videoconvert,
@@ -123,7 +122,7 @@ pub fn stream(
 
     // * Link video
     gst::Element::link_many([
-        &background,
+        // &background,
         &video_overlay,
         &ovcaps_filter,
         &videoconvert,

@@ -62,6 +62,7 @@ pub fn stream<F>(
         .unwrap();
     let video_encoder = ElementFactory::make(enc)
         .property("key-int-max", 30_u32)
+        .property("bitrate", 2500_u32)
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();
@@ -75,6 +76,7 @@ pub fn stream<F>(
     // * Sink
     let rtmp_sink = ElementFactory::make("rtmp2sink")
         .property("location", rtmp_uri)
+        .property("peak-kbps", 2500_u32)
         .build()
         .unwrap();
 

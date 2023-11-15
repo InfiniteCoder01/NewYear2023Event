@@ -52,7 +52,7 @@ fn main() {
                 ))
                 .unwrap();
 
-            context.set_source_rgb(0.0, 0.0, 1.0);
+            context.set_source_rgb(1.0, 0.0, 0.0);
             context.rectangle(
                 width / 2.0 + uptime.as_secs_f64().sin() * 100.0 - 50.0,
                 height / 2.0 - 50.0,

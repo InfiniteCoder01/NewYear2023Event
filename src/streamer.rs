@@ -135,74 +135,74 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
-    let fontmap = pangocairo::FontMap::new();
-    let context = fontmap.create_context();
-    let layout = LayoutWrapper(pango::Layout::new(&context));
-    let font_desc = pango::FontDescription::from_string("Sans Bold 26");
-    layout.set_font_description(Some(&font_desc));
-    layout.set_text("GStreamer");
-    let drawer = std::sync::Arc::new(std::sync::Mutex::new(DrawingContext { layout, info: None }));
-    let drawer_clone = drawer.clone();
+    // let fontmap = pangocairo::FontMap::new();
+    // let context = fontmap.create_context();
+    // let layout = LayoutWrapper(pango::Layout::new(&context));
+    // let font_desc = pango::FontDescription::from_string("Sans Bold 26");
+    // layout.set_font_description(Some(&font_desc));
+    // layout.set_text("GStreamer");
+    // let drawer = std::sync::Arc::new(std::sync::Mutex::new(DrawingContext { layout, info: None }));
+    // let drawer_clone = drawer.clone();
     video_overlay.connect("draw", false, move |args| {
-        use std::f64::consts::PI;
-
-        let drawer = &drawer_clone;
-        let drawer = drawer.lock().unwrap();
+        // let drawer = &drawer_clone;
+        // let drawer = drawer.lock().unwrap();
 
         let cr = args[1].get::<cairo::Context>().unwrap();
         let timestamp = args[2].get::<gst::ClockTime>().unwrap();
 
-        let info = drawer.info.as_ref().unwrap();
-        let layout = &drawer.layout;
+        cr.show_text("Hello, world!");
 
-        let angle = 2.0 * PI * (timestamp % (10 * gst::ClockTime::SECOND)).nseconds() as f64
-            / (10.0 * gst::ClockTime::SECOND.nseconds() as f64);
+        // let info = drawer.info.as_ref().unwrap();
+        // let layout = &drawer.layout;
 
-        // The image we draw (the text) will be static, but we will change the
-        // transformation on the drawing context, which rotates and shifts everything
-        // that we draw afterwards. Like this, we have no complicated calculations
-        // in the actual drawing below.
-        // Calling multiple transformation methods after each other will apply the
-        // new transformation on top. If you repeat the cr.rotate(angle) line below
-        // this a second time, everything in the canvas will rotate twice as fast.
-        cr.translate(
-            f64::from(info.width()) / 2.0,
-            f64::from(info.height()) / 2.0,
-        );
-        cr.rotate(angle);
+        // let angle = 2.0 * PI * (timestamp % (10 * gst::ClockTime::SECOND)).nseconds() as f64
+        //     / (10.0 * gst::ClockTime::SECOND.nseconds() as f64);
 
-        // This loop will render 10 times the string "GStreamer" in a circle
-        for i in 0..10 {
-            // Cairo, like most rendering frameworks, is using a stack for transformations
-            // with this, we push our current transformation onto this stack - allowing us
-            // to make temporary changes / render something / and then returning to the
-            // previous transformations.
-            cr.save().expect("Failed to save state");
+        // // The image we draw (the text) will be static, but we will change the
+        // // transformation on the drawing context, which rotates and shifts everything
+        // // that we draw afterwards. Like this, we have no complicated calculations
+        // // in the actual drawing below.
+        // // Calling multiple transformation methods after each other will apply the
+        // // new transformation on top. If you repeat the cr.rotate(angle) line below
+        // // this a second time, everything in the canvas will rotate twice as fast.
+        // cr.translate(
+        //     f64::from(info.width()) / 2.0,
+        //     f64::from(info.height()) / 2.0,
+        // );
+        // cr.rotate(angle);
 
-            let angle = (360. * f64::from(i)) / 10.0;
-            let red = (1.0 + f64::cos((angle - 60.0) * PI / 180.0)) / 2.0;
-            cr.set_source_rgb(red, 0.0, 1.0 - red);
-            cr.rotate(angle * PI / 180.0);
+        // // This loop will render 10 times the string "GStreamer" in a circle
+        // for i in 0..10 {
+        //     // Cairo, like most rendering frameworks, is using a stack for transformations
+        //     // with this, we push our current transformation onto this stack - allowing us
+        //     // to make temporary changes / render something / and then returning to the
+        //     // previous transformations.
+        //     cr.save().expect("Failed to save state");
 
-            // Update the text layout. This function is only updating pango's internal state.
-            // So e.g. that after a 90 degree rotation it knows that what was previously going
-            // to end up as a 200x100 rectangle would now be 100x200.
-            pangocairo::functions::update_layout(&cr, layout);
-            let (width, _height) = layout.size();
-            // Using width and height of the text, we can properly position it within
-            // our canvas.
-            cr.move_to(
-                -(f64::from(width) / f64::from(pango::SCALE)) / 2.0,
-                -(f64::from(info.height())) / 2.0,
-            );
-            // After telling the layout object where to draw itself, we actually tell
-            // it to draw itself into our cairo context.
-            pangocairo::functions::show_layout(&cr, layout);
+        //     let angle = (360. * f64::from(i)) / 10.0;
+        //     let red = (1.0 + f64::cos((angle - 60.0) * PI / 180.0)) / 2.0;
+        //     cr.set_source_rgb(red, 0.0, 1.0 - red);
+        //     cr.rotate(angle * PI / 180.0);
 
-            // Here we go one step up in our stack of transformations, removing any
-            // changes we did to them since the last call to cr.save();
-            cr.restore().expect("Failed to restore state");
-        }
+        //     // Update the text layout. This function is only updating pango's internal state.
+        //     // So e.g. that after a 90 degree rotation it knows that what was previously going
+        //     // to end up as a 200x100 rectangle would now be 100x200.
+        //     pangocairo::functions::update_layout(&cr, layout);
+        //     let (width, _height) = layout.size();
+        //     // Using width and height of the text, we can properly position it within
+        //     // our canvas.
+        //     cr.move_to(
+        //         -(f64::from(width) / f64::from(pango::SCALE)) / 2.0,
+        //         -(f64::from(info.height())) / 2.0,
+        //     );
+        //     // After telling the layout object where to draw itself, we actually tell
+        //     // it to draw itself into our cairo context.
+        //     pangocairo::functions::show_layout(&cr, layout);
+
+        //     // Here we go one step up in our stack of transformations, removing any
+        //     // changes we did to them since the last call to cr.save();
+        //     cr.restore().expect("Failed to restore state");
+        // }
 
         None
     });
@@ -211,8 +211,8 @@ pub fn stream(
         let _overlay = args[0].get::<gst::Element>().unwrap();
         let caps = args[1].get::<gst::Caps>().unwrap();
 
-        let mut drawer = drawer.lock().unwrap();
-        drawer.info = Some(gst_video::VideoInfo::from_caps(&caps).unwrap());
+        // let mut drawer = drawer.lock().unwrap();
+        // drawer.info = Some(gst_video::VideoInfo::from_caps(&caps).unwrap());
 
         None
     });

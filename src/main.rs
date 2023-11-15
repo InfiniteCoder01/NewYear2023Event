@@ -21,7 +21,7 @@ fn main() {
         (1280, 720),
         // (640, 480),
         60,
-        7500,
+        7500, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {

@@ -167,7 +167,7 @@ pub fn stream<F>(
                         sample.clone_from_slice(
                             &rand::thread_rng()
                                 .gen_range::<f32, _>(-1.0..1.0)
-                                .to_be_bytes(),
+                                .to_le_bytes(),
                         )
                     }
                 }

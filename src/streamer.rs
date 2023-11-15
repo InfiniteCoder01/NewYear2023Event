@@ -4,12 +4,10 @@ extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
 
-pub fn stream(
-    size: (usize, usize),
-    audio_bitrate: usize,
-    rtmp_uri: &str,
-    mut draw_frame: impl FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
-) {
+pub fn stream<F>(size: (usize, usize), audio_bitrate: usize, rtmp_uri: &str, mut draw_frame: F)
+where
+    F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
+{
     // let pipeline_str = format!(
     //     concat!(
     //         "cairooverlay ! ",
@@ -113,12 +111,24 @@ pub fn stream(
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
+    struct SharedPtr<T>(*mut T);
+    unsafe impl<T> Send for SharedPtr<T> {}
+    unsafe impl<T> Sync for SharedPtr<T> {}
+    impl<T> Clone for SharedPtr<T> {
+        fn clone(&self) -> Self {
+            Self(self.0)
+        }
+    }
+
+    let draw_frame = SharedPtr(&mut draw_frame as *mut F);
     video_overlay.connect("draw", false, move |args| {
-        draw_frame(
-            args[1].get::<cairo::Context>().unwrap(),
-            width as _,
-            height as _,
-        );
+        unsafe {
+            (*draw_frame.clone().0)(
+                args[1].get::<cairo::Context>().unwrap(),
+                width as _,
+                height as _,
+            );
+        }
         None
     });
 

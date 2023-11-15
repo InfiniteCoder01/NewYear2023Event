@@ -159,7 +159,7 @@ pub fn stream<F>(
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(|src, _| {
-                let mut buffer = gst::Buffer::with_size(4096).unwrap();
+                let mut buffer = gst::Buffer::with_size(1024).unwrap();
                 {
                     let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
                     let data = buffer.as_mut_slice();

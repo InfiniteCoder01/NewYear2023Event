@@ -15,6 +15,7 @@ fn main() {
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
     let mut last_frame = std::time::Instant::now();
+    let mut frame_times = [0u128; 8];
     streamer::stream(
         // (1920, 1080),
         // (1280, 720),
@@ -25,6 +26,8 @@ fn main() {
         move |context, width, height| {
             let frame_time = last_frame.elapsed();
             last_frame = std::time::Instant::now();
+            frame_times[frame_index % frame_times.len()] = frame_time.as_micros();
+            let frame_time = frame_times.iter().copied().sum::<u128>() as usize / frame_times.len();
             let uptime = stream_start.elapsed();
 
             context.set_source_rgb(1.0, 1.0, 1.0);
@@ -42,13 +45,13 @@ fn main() {
                 .unwrap();
             context.move_to(20.0, 70.0);
             context
-                .show_text(&format!("Rendered in {}ms", frame_time.as_millis(),))
+                .show_text(&format!("Rendered in {}ms", frame_time / 1000))
                 .unwrap();
             context.move_to(20.0, 90.0);
             context
                 .show_text(&format!(
                     "Framerate: {:.2}",
-                    1_000_000.0 / frame_time.as_micros() as f32,
+                    1_000_000.0 / frame_time as f32,
                 ))
                 .unwrap();
 

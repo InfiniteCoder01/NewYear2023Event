@@ -89,7 +89,7 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 44100, 2)
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 16000, 1)
                 .build()
                 .unwrap()
                 .to_caps()

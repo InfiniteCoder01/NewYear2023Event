@@ -157,20 +157,17 @@ pub fn stream<F>(
     });
 
     // * Audio callback
-    audio_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(|src, _| {
-                let mut samples = Vec::with_capacity(512);
-                for _ in 0..samples.capacity() {
-                    samples.push(rand::thread_rng().gen_range::<f32, _>(-1.0..1.0));
-                }
-                let buffer = gst::Buffer::from_slice(unsafe {
-                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
-                });
-                src.push_buffer(buffer).unwrap();
-            })
-            .build(),
-    );
+    std::thread::spawn(move || loop {
+        let mut samples = Vec::with_capacity(512);
+        for _ in 0..samples.capacity() {
+            samples.push(rand::thread_rng().gen_range::<f32, _>(-1.0..1.0));
+        }
+        let buffer = gst::Buffer::from_slice(unsafe {
+            std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+        });
+        audio_source.push_buffer(buffer).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    });
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

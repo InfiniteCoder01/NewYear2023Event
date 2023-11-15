@@ -73,9 +73,8 @@ pub fn stream<F>(
         .unwrap();
 
     // * Sink
-    let rtmp_sink = ElementFactory::make("rtmp2sink")
+    let rtmp_sink = ElementFactory::make("rtmpsink")
         .property("location", rtmp_uri)
-        .property("peak-kbps", 2500_u32)
         .build()
         .unwrap();
 

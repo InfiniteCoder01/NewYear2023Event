@@ -53,28 +53,25 @@ pub fn stream(
 
     // * Source
     let (width, height) = size;
-    // let video_info =
-    //     gst_video::VideoInfo::builder(gst_video::VideoFormat::Rgb, width as u32, height as u32)
-    //         .fps(gst::Fraction::new(fps as _, 1))
-    //         .build()
-    //         .unwrap();
-    // let background = ElementFactory::make("videotestsrc")
-    //     .property_from_str("pattern", "ball")
-    //     .build()
-    //     .unwrap();
+    let background = ElementFactory::make("videotestsrc")
+        .property_from_str("pattern", "black")
+        .build()
+        .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
-    let caps = gst_video::VideoCapsBuilder::new()
-        .width(width as _)
-        .height(height as _)
-        .build();
-    let ovcaps_filter = ElementFactory::make("capsfilter")
-        .property("caps", &caps)
+    let source_caps_filter = ElementFactory::make("capsfilter")
+        .property(
+            "caps",
+            gst_video::VideoCapsBuilder::new()
+                .width(width as _)
+                .height(height as _)
+                .build(),
+        )
         .build()
         .unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make(cvt).build().unwrap();
-    let caps_filter = ElementFactory::make("capsfilter")
+    let youtube_caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
             Caps::builder("video/x-raw").field("format", "I420").build(),
@@ -106,11 +103,11 @@ pub fn stream(
     // * Add
     pipeline
         .add_many([
-            // &background,
+            &background,
             &video_overlay,
-            &ovcaps_filter,
+            &source_caps_filter,
             &videoconvert,
-            &caps_filter,
+            &youtube_caps_filter,
             &video_encoder,
             &video_decoder,
             &mux,
@@ -122,11 +119,11 @@ pub fn stream(
 
     // * Link video
     gst::Element::link_many([
-        // &background,
+        &background,
         &video_overlay,
-        &ovcaps_filter,
+        &source_caps_filter,
         &videoconvert,
-        &caps_filter,
+        &youtube_caps_filter,
         &video_encoder,
         &video_decoder,
         &mux,
@@ -152,13 +149,8 @@ pub fn stream(
         let drawer = &drawer_clone;
         let drawer = drawer.lock().unwrap();
 
-        // Get the signal's arguments
-        let _overlay = args[0].get::<gst::Element>().unwrap();
-        // This is the cairo context. This is the root of all of cairo's
-        // drawing functionality.
         let cr = args[1].get::<cairo::Context>().unwrap();
         let timestamp = args[2].get::<gst::ClockTime>().unwrap();
-        let _duration = args[3].get::<gst::ClockTime>().unwrap();
 
         let info = drawer.info.as_ref().unwrap();
         let layout = &drawer.layout;

@@ -40,7 +40,6 @@ where
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
-                .format(gst_video::VideoFormat::Rgb)
                 .build(),
         )
         .build()

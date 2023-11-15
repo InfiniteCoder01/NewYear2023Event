@@ -37,14 +37,15 @@ fn main() {
             context.set_font_size(20.0);
             context.move_to(20.0, 30.0);
             context.show_text(&format!("Frame {frame_index}",)).unwrap();
+            context.move_to(20.0, 50.0);
             context
                 .show_text(&format!("Uptime: {}", uptime.hhmmssxxx(),))
                 .unwrap();
-            context.move_to(20.0, 50.0);
+            context.move_to(20.0, 70.0);
             context
                 .show_text(&format!("Rendered in {}ms", frame_time.as_millis(),))
                 .unwrap();
-            context.move_to(20.0, 70.0);
+            context.move_to(20.0, 90.0);
             context
                 .show_text(&format!(
                     "Framerate: {:.2}",
@@ -52,7 +53,7 @@ fn main() {
                 ))
                 .unwrap();
 
-            context.set_source_rgb(1.0, 0.0, 0.0);
+            context.set_source_rgb(0.0, 0.0, 1.0);
             context.rectangle(
                 width / 2.0 + uptime.as_secs_f64().sin() * 100.0 - 50.0,
                 height / 2.0 - 50.0,

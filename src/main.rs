@@ -86,6 +86,7 @@ fn main() {
                     .play_buffer(buffer, 0, mixr::PlayProperties::default())
                     .unwrap();
             }
+            println!("Frame!");
         },
     );
 }

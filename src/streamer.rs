@@ -165,9 +165,9 @@ pub fn stream<F>(
     // * Audio callback
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
-            .need_data(move |src, _| {
+            .need_data(move |src, length| {
                 let mut audio_system = audio_mixer.lock().unwrap();
-                let mut samples = Vec::with_capacity(512);
+                let mut samples = Vec::with_capacity(length as usize / 4);
                 audio_system.read_buffer_stereo_f32(&mut samples);
                 let buffer = gst::Buffer::from_slice(unsafe {
                     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)

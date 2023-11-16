@@ -85,8 +85,8 @@ fn main() {
                 audio
                     .play_buffer(buffer, 0, mixr::PlayProperties::default())
                     .unwrap();
+                println!("Play!");
             }
-            println!("Frame!");
         },
     );
 }

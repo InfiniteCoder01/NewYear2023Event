@@ -166,6 +166,7 @@ pub fn stream<F>(
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, length| {
+                println!("Requested...");
                 let mut audio_system = audio_mixer.lock().unwrap();
                 let mut samples = Vec::with_capacity(length as usize / 4);
                 audio_system.read_buffer_stereo_f32(&mut samples);
@@ -173,6 +174,7 @@ pub fn stream<F>(
                     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
                 });
                 src.push_buffer(buffer).unwrap();
+                println!("Done!");
             })
             .build(),
     );

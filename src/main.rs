@@ -1,6 +1,7 @@
 pub mod streamer;
 
 use hhmmss::Hhmmss;
+use mixr::stream::AudioStream;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -11,6 +12,9 @@ pub struct Private {
 fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
+    let mut song =
+        mixr::stream::Stream::from_file("Assets/Feint - We Won't Be Alone (feat. Laura Brehm).wav")
+            .unwrap();
 
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
@@ -22,9 +26,10 @@ fn main() {
         // (640, 480),
         30,
         5950, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
+        44100,
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
-        move |context, width, height| {
+        move |context, width, height, audio| {
             let frame_time = last_frame.elapsed();
             last_frame = std::time::Instant::now();
             frame_times[frame_index % frame_times.len()] = frame_time.as_micros();
@@ -66,6 +71,21 @@ fn main() {
             context.fill().unwrap();
 
             frame_index += 1;
+
+            // * Audio
+            if audio.get_voice_state(0).unwrap() != mixr::PlayState::Playing {
+                let buffer = audio
+                    .create_buffer(
+                        mixr::BufferDescription {
+                            format: song.format(),
+                        },
+                        Some(&song.get_pcm().unwrap()),
+                    )
+                    .unwrap();
+                audio
+                    .play_buffer(buffer, 0, mixr::PlayProperties::default())
+                    .unwrap();
+            }
         },
     );
 }

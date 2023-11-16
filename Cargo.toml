@@ -10,11 +10,10 @@ gstreamer-app = { version = "0.21.2" }
 gstreamer-video = "0.21.2"
 
 cairo-rs = "0.18.3"
-mixer = "0.1.0"
+mixr = { git = "https://github.com/piegfx/mixr.git" }
 
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"
 
 hhmmss = "0.1.0"
 gstreamer-audio = "0.21.2"
-rand = "0.8.5"

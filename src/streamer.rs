@@ -4,17 +4,18 @@ extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
-use rand::Rng;
+use mixr::AudioSystem;
 
 pub fn stream<F>(
     size: (usize, usize),
     fps: usize,
     video_bitrate: usize,
+    audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
-    mut draw_frame: F,
+    draw_frame: F,
 ) where
-    F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
+    F: FnMut(cairo::Context, f64, f64, &mut AudioSystem) + Send + Sync + 'static,
 {
     // let pipeline_str = format!(
     //     concat!(
@@ -34,6 +35,7 @@ pub fn stream<F>(
     let pipeline = gst::Pipeline::default();
 
     let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
+    // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
     // * Source
     let (width, height) = size;
@@ -87,7 +89,7 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 16000, 1)
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S16be, audio_samplerate as _, 2)
                 .build()
                 .unwrap()
                 .to_caps()
@@ -95,6 +97,7 @@ pub fn stream<F>(
         )
         .format(gst::Format::Time)
         .build();
+    let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -113,6 +116,7 @@ pub fn stream<F>(
             &mux,
             &rtmp_sink,
             audio_source.upcast_ref(),
+            &audio_converter,
             &audio_encoder,
         ])
         .unwrap();
@@ -132,42 +136,46 @@ pub fn stream<F>(
     .unwrap();
 
     // * Link audio
-    gst::Element::link_many([audio_source.upcast_ref(), &audio_encoder, &mux]).unwrap();
+    gst::Element::link_many([
+        audio_source.upcast_ref(),
+        &audio_converter,
+        &audio_encoder,
+        &mux,
+    ])
+    .unwrap();
+
+    let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(AudioSystem::new(
+        audio_samplerate as _,
+        16,
+    )));
 
     // * Draw callback
-    struct SharedPtr<T>(*mut T);
-    unsafe impl<T> Send for SharedPtr<T> {}
-    unsafe impl<T> Sync for SharedPtr<T> {}
-    impl<T> Clone for SharedPtr<T> {
-        fn clone(&self) -> Self {
-            Self(self.0)
-        }
-    }
-
-    let draw_frame = SharedPtr(&mut draw_frame as *mut F);
+    let callback_audio_mixer = audio_mixer.clone();
+    let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
-        unsafe {
-            (*draw_frame.clone().0)(
-                args[1].get::<cairo::Context>().unwrap(),
-                width as _,
-                height as _,
-            );
-        }
+        draw_frame.lock().unwrap()(
+            args[1].get::<cairo::Context>().unwrap(),
+            width as _,
+            height as _,
+            &mut callback_audio_mixer.clone().lock().unwrap(),
+        );
         None
     });
 
     // * Audio callback
-    std::thread::spawn(move || loop {
-        let mut samples = Vec::with_capacity(512);
-        for _ in 0..samples.capacity() {
-            samples.push(rand::thread_rng().gen_range::<f32, _>(-1.0..1.0));
-        }
-        let buffer = gst::Buffer::from_slice(unsafe {
-            std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
-        });
-        audio_source.push_buffer(buffer).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-    });
+    audio_source.set_callbacks(
+        gst_app::AppSrcCallbacks::builder()
+            .need_data(move |src, _| {
+                let mut audio_system = audio_mixer.lock().unwrap();
+                let mut samples = Vec::with_capacity(512);
+                audio_system.read_buffer_stereo_f32(&mut samples);
+                let buffer = gst::Buffer::from_slice(unsafe {
+                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                });
+                src.push_buffer(buffer).unwrap();
+            })
+            .build(),
+    );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 
@@ -177,7 +185,24 @@ pub fn stream<F>(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!("Element {:?}:\n{}", err.src(), err);
+                panic!(
+                    "Element {}:\n{}",
+                    err.src().map_or(String::from("None"), |elemen| elemen
+                        .name()
+                        .as_str()
+                        .to_owned()),
+                    err
+                );
+            }
+            MessageView::Warning(warning) => {
+                eprintln!(
+                    "Warning from element {}:\n{}",
+                    warning.src().map_or(String::from("None"), |elemen| elemen
+                        .name()
+                        .as_str()
+                        .to_owned()),
+                    warning
+                );
             }
             _ => (),
         }

@@ -24,7 +24,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "appsrc ! queue ! audioconvert ! voaacenc bitrate=128000 ! mux."
+    //         "appsrc ! audioconvert ! queue ! voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -34,8 +34,8 @@ pub fn stream<F>(
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
 
-    let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
-    // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
+    // let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
+    let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
     // * Source
     let (width, height) = size;
@@ -97,8 +97,11 @@ pub fn stream<F>(
         )
         .format(gst::Format::Time)
         .build();
-    let audio_queue = ElementFactory::make("queue").build().unwrap();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
+    let audio_queue = ElementFactory::make("queue")
+        .property_from_str("leaky", "upstream")
+        .build()
+        .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -117,8 +120,8 @@ pub fn stream<F>(
             &mux,
             &rtmp_sink,
             audio_source.upcast_ref(),
-            &audio_queue,
             &audio_converter,
+            &audio_queue,
             &audio_encoder,
         ])
         .unwrap();
@@ -140,8 +143,8 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([
         audio_source.upcast_ref(),
-        &audio_queue,
         &audio_converter,
+        &audio_queue,
         &audio_encoder,
         &mux,
     ])

@@ -4,7 +4,7 @@ extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
-use mixr::AudioSystem;
+use mixr::{stream::AudioStream, AudioSystem};
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -169,16 +169,21 @@ pub fn stream<F>(
     });
 
     // * Audio callback
+    let mut song =
+        mixr::stream::Stream::from_file("Assets/Feint - We Won't Be Alone (feat. Laura Brehm).wav")
+            .unwrap();
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
-            .need_data(move |src, length| {
-                let mut audio_system = audio_mixer.lock().unwrap();
-                let mut samples = vec![0.0_f32; length as usize / 4];
-                audio_system.read_buffer_stereo_f32(&mut samples);
-                let buffer = gst::Buffer::from_slice(unsafe {
-                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
-                });
-                src.push_buffer(buffer).unwrap();
+            .need_data(move |src, _length| {
+                // let mut audio_system = audio_mixer.lock().unwrap();
+                // let mut samples = vec![0.0_f32; length as usize / 4];
+                // audio_system.read_buffer_stereo_f32(&mut samples);
+                // let buffer = gst::Buffer::from_slice(unsafe {
+                //     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                // });
+                // src.push_buffer(buffer).unwrap();
+                src.push_buffer(gst::Buffer::from_slice(song.get_pcm().unwrap()))
+                    .unwrap();
             })
             .build(),
     );

@@ -1,7 +1,6 @@
 pub mod streamer;
 
 use hhmmss::Hhmmss;
-use mixr::stream::AudioStream;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -12,9 +11,6 @@ pub struct Private {
 fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
-    let mut song =
-        mixr::stream::Stream::from_file("Assets/Feint - We Won't Be Alone (feat. Laura Brehm).wav")
-            .unwrap();
 
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
@@ -73,18 +69,8 @@ fn main() {
             frame_index += 1;
 
             // * Audio
-            if audio.get_voice_state(0).unwrap() != mixr::PlayState::Playing {
-                let buffer = audio
-                    .create_buffer(
-                        mixr::BufferDescription {
-                            format: song.format(),
-                        },
-                        Some(&song.get_pcm().unwrap()),
-                    )
-                    .unwrap();
-                audio
-                    .play_buffer(buffer, 0, mixr::PlayProperties::default())
-                    .unwrap();
+            if audio.silent() {
+                audio.play("Assets/Feint - We Won't Be Alone (feat. Laura Brehm).mp3");
                 println!("Play!");
             }
         },

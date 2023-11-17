@@ -4,7 +4,22 @@ extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
-use mixr::AudioSystem;
+
+#[derive(Default)]
+pub struct Mixer {
+    voices: Vec<minimp3::Decoder<std::fs::File>>,
+}
+
+impl Mixer {
+    pub fn play(&mut self, path: &str) {
+        self.voices
+            .push(minimp3::Decoder::new(std::fs::File::open(path).unwrap()));
+    }
+
+    pub fn silent(&self) -> bool {
+        self.voices.is_empty()
+    }
+}
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -15,7 +30,7 @@ pub fn stream<F>(
     rtmp_uri: &str,
     draw_frame: F,
 ) where
-    F: FnMut(cairo::Context, f64, f64, &mut AudioSystem) + Send + Sync + 'static,
+    F: FnMut(cairo::Context, f64, f64, &mut Mixer) + Send + Sync + 'static,
 {
     // let pipeline_str = format!(
     //     concat!(
@@ -150,10 +165,7 @@ pub fn stream<F>(
     ])
     .unwrap();
 
-    let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(AudioSystem::new(
-        audio_samplerate as _,
-        16,
-    )));
+    let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(Mixer::default()));
 
     // * Draw callback
     let callback_audio_mixer = audio_mixer.clone();
@@ -172,13 +184,33 @@ pub fn stream<F>(
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, _length| {
-                let mut audio_system = audio_mixer.lock().unwrap();
-                let mut samples = vec![0.0_f32; 512];
-                audio_system.read_buffer_stereo_f32(&mut samples);
-                let buffer = gst::Buffer::from_slice(unsafe {
-                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                let mut audio_mixer = audio_mixer.lock().unwrap();
+                let mut samples = Vec::new();
+                audio_mixer.voices.retain_mut(|voice| {
+                    match voice.next_frame() {
+                        Ok(minimp3::Frame {
+                            data,
+                            sample_rate,
+                            channels,
+                            ..
+                        }) => {
+                            for sample in data
+                                .chunks_exact(channels)
+                                .step_by((sample_rate as usize / audio_samplerate).max(1))
+                            {
+                                samples
+                                    .extend(sample.iter().map(|sample| *sample as f32 / 32767.0));
+                            }
+                        }
+                        Err(minimp3::Error::Eof) => return false,
+                        Err(e) => panic!("{:?}", e),
+                    }
+                    let buffer = gst::Buffer::from_slice(unsafe {
+                        std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                    });
+                    src.push_buffer(buffer).unwrap();
+                    true
                 });
-                src.push_buffer(buffer).unwrap();
             })
             .build(),
     );

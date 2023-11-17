@@ -173,7 +173,7 @@ pub fn stream<F>(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, length| {
                 let mut audio_system = audio_mixer.lock().unwrap();
-                let mut samples = vec![0.0_f32; length as usize / 4];
+                let mut samples = vec![0.0_f32; 2];
                 audio_system.read_buffer_stereo_f32(&mut samples);
                 let buffer = gst::Buffer::from_slice(unsafe {
                     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)

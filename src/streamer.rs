@@ -170,7 +170,6 @@ pub fn stream<F>(
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, _length| {
-                println!("Playing...");
                 let mut audio_mixer = audio_mixer.lock().unwrap();
                 let samples = if let Some(voice) = &mut audio_mixer.voice {
                     match voice.next_frame() {
@@ -179,10 +178,12 @@ pub fn stream<F>(
                             sample_rate,
                             channels,
                             ..
-                        }) => data
-                            .into_iter()
-                            .map(|sample| sample as f32 / 32767.0)
-                            .collect::<Vec<_>>(),
+                        }) => {
+                            println!("Playing...");
+                            data.into_iter()
+                                .map(|sample| sample as f32 / 32767.0)
+                                .collect::<Vec<_>>()
+                        }
                         Err(minimp3::Error::Eof) => {
                             audio_mixer.voice = None;
                             vec![0_f32; 2]

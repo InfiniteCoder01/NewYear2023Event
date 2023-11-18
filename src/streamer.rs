@@ -99,7 +99,7 @@ pub fn stream<F>(
         .build();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_queue = ElementFactory::make("queue")
-        // .property_from_str("leaky", "downstream")
+        // .property_from_str("leaky", "upstream")
         .build()
         .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
@@ -189,7 +189,7 @@ pub fn stream<F>(
                     vec![0; 2]
                 };
                 let buffer = gst::Buffer::from_slice(unsafe {
-                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 2)
                 });
                 src.push_buffer(buffer).unwrap();
             })

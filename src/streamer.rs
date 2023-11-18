@@ -1,10 +1,8 @@
 extern crate gstreamer as gst;
 extern crate gstreamer_app as gst_app;
-extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
-use rand::Rng;
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -84,16 +82,7 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
-    let audio_source = gst_app::AppSrc::builder()
-        .is_live(true)
-        .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, 44100, 2)
-                .build()
-                .unwrap()
-                .to_caps()
-                .unwrap(),
-        )
-        .build();
+    let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -111,7 +100,7 @@ pub fn stream<F>(
             &video_decoder,
             &mux,
             &rtmp_sink,
-            audio_source.upcast_ref(),
+            &audio_source,
             &audio_encoder,
         ])
         .unwrap();
@@ -131,7 +120,7 @@ pub fn stream<F>(
     .unwrap();
 
     // * Link audio
-    gst::Element::link_many([audio_source.upcast_ref(), &audio_encoder, &mux]).unwrap();
+    gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
     struct SharedPtr<T>(*mut T);
@@ -155,27 +144,6 @@ pub fn stream<F>(
         None
     });
 
-    // * Audio callback
-    audio_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(|src, _| {
-                let mut buffer = gst::Buffer::with_size(4096).unwrap();
-                {
-                    let mut buffer = buffer.get_mut().unwrap().map_writable().unwrap();
-                    let data = buffer.as_mut_slice();
-                    for sample in data.chunks_exact_mut(4) {
-                        sample.clone_from_slice(
-                            &rand::thread_rng()
-                                .gen_range::<f32, _>(-1.0..1.0)
-                                .to_be_bytes(),
-                        )
-                    }
-                }
-                src.push_buffer(buffer).unwrap();
-            })
-            .build(),
-    );
-
     pipeline.set_state(gst::State::Playing).unwrap();
 
     for msg in pipeline.bus().unwrap().iter_timed(gst::ClockTime::NONE) {
@@ -184,7 +152,7 @@ pub fn stream<F>(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!("Element {:?}:\n{}", err.src(), err);
+                panic!("{}", err);
             }
             _ => (),
         }

@@ -1,4 +1,5 @@
 pub mod streamer;
+pub mod mixer;
 
 use hhmmss::Hhmmss;
 use serde::Deserialize;
@@ -25,7 +26,7 @@ fn main() {
         44100,
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
-        move |context, width, height, audio| {
+        move |context, width, height| {
             let frame_time = last_frame.elapsed();
             last_frame = std::time::Instant::now();
             frame_times[frame_index % frame_times.len()] = frame_time.as_micros();
@@ -69,10 +70,10 @@ fn main() {
             frame_index += 1;
 
             // * Audio
-            if audio.silent() {
-                audio.play("Assets/Feint - We Won't Be Alone (feat. Laura Brehm).mp3");
-                println!("Play!");
-            }
+            // if audio.silent() {
+            //     audio.play("Assets/Aviators - Glow (Anthem Rock).mp3");
+            //     println!("Play!");
+            // }
         },
     );
 }

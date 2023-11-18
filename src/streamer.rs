@@ -13,7 +13,7 @@ pub fn stream<F>(
     audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
-    mut draw_frame: F,
+    draw_frame: F,
 ) where
     F: FnMut(cairo::Context, f64, f64, &mut Mixer) + Send + Sync + 'static,
 {
@@ -156,6 +156,7 @@ pub fn stream<F>(
     let callback_audio_mixer = audio_mixer.clone();
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
+        println!("Frame!");
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,

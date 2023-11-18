@@ -120,8 +120,8 @@ pub fn stream<F>(
             &mux,
             &rtmp_sink,
             audio_source.upcast_ref(),
-            &audio_converter,
-            &audio_queue,
+            // &audio_converter,
+            // &audio_queue,
             &audio_encoder,
         ])
         .unwrap();
@@ -143,8 +143,8 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([
         audio_source.upcast_ref(),
-        &audio_converter,
-        &audio_queue,
+        // &audio_converter,
+        // &audio_queue,
         &audio_encoder,
         &mux,
     ])

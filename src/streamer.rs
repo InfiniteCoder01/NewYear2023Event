@@ -180,11 +180,11 @@ pub fn stream<F>(
                             ..
                         }) => {
                             let samples = data
-                            .into_iter()
-                            .map(|sample| sample as f32 / 32767.0)
-                            .collect::<Vec<_>>();
-                        
-                        dbg!(samples.len());
+                                .into_iter()
+                                .map(|sample| sample as f32 / 32767.0)
+                                .collect::<Vec<_>>();
+
+                            dbg!(samples.len());
                             let buffer = gst::Buffer::from_slice(unsafe {
                                 std::slice::from_raw_parts(
                                     samples.as_ptr() as *const u8,

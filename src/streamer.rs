@@ -172,6 +172,7 @@ pub fn stream<F>(
             .need_data(move |src, _length| {
                 let mut audio_mixer = audio_mixer.lock().unwrap();
                 if let Some(voice) = &mut audio_mixer.voice {
+                    println!("Playing...");
                     match voice.next_frame() {
                         Ok(minimp3::Frame {
                             data,
@@ -184,7 +185,6 @@ pub fn stream<F>(
                                 .map(|sample| sample as f32 / 32767.0)
                                 .collect::<Vec<_>>();
 
-                            dbg!(samples.len());
                             let buffer = gst::Buffer::from_slice(unsafe {
                                 std::slice::from_raw_parts(
                                     samples.as_ptr() as *const u8,

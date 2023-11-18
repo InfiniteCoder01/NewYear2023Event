@@ -89,7 +89,7 @@ pub fn stream<F>(
     let audio_source = gst_app::AppSrc::builder()
         .is_live(true)
         .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32be, audio_samplerate as _, 2)
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S16le, audio_samplerate as _, 2)
                 .build()
                 .unwrap()
                 .to_caps()
@@ -180,18 +180,16 @@ pub fn stream<F>(
                             ..
                         }) => {
                             println!("Playing...");
-                            data.into_iter()
-                                .map(|sample| sample as f32 / 32767.0)
-                                .collect::<Vec<_>>()
+                            data
                         }
                         Err(minimp3::Error::Eof) => {
                             audio_mixer.voice = None;
-                            vec![0_f32; 2]
+                            vec![0; 2]
                         }
                         Err(e) => panic!("{:?}", e),
                     }
                 } else {
-                    vec![0_f32; 2]
+                    vec![0; 2]
                 };
                 let buffer = gst::Buffer::from_slice(unsafe {
                     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)

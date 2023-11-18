@@ -12,7 +12,7 @@ pub fn stream<F>(
     audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
-    draw_frame: F,
+    mut draw_frame: F,
 ) where
     F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {

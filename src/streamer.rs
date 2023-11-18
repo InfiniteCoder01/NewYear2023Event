@@ -1,5 +1,6 @@
 extern crate gstreamer as gst;
 extern crate gstreamer_app as gst_app;
+extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
 use gst::{prelude::*, Caps, ElementFactory};
@@ -8,6 +9,7 @@ pub fn stream<F>(
     size: (usize, usize),
     fps: usize,
     video_bitrate: usize,
+    audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
     mut draw_frame: F,
@@ -21,7 +23,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "audiotestsrc ! voaacenc bitrate=128000 ! mux."
+    //         "appsrc ! audioconvert ! queue ! voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -32,6 +34,7 @@ pub fn stream<F>(
     let pipeline = gst::Pipeline::default();
 
     let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
+    // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
     // * Source
     let (width, height) = size;
@@ -82,7 +85,23 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
+    // let audio_source = gst_app::AppSrc::builder()
+    //     .is_live(true)
+    //     .caps(
+    //         &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32le, audio_samplerate as _, 2)
+    //             .build()
+    //             .unwrap()
+    //             .to_caps()
+    //             .unwrap(),
+    //     )
+    //     .format(gst::Format::Time)
+    //     .build();
     let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
+    // let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
+    // let audio_queue = ElementFactory::make("queue")
+    //     .property_from_str("leaky", "upstream")
+    //     .build()
+    //     .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -100,7 +119,9 @@ pub fn stream<F>(
             &video_decoder,
             &mux,
             &rtmp_sink,
-            &audio_source,
+            audio_source.upcast_ref(),
+            // &audio_converter,
+            // &audio_queue,
             &audio_encoder,
         ])
         .unwrap();
@@ -120,9 +141,20 @@ pub fn stream<F>(
     .unwrap();
 
     // * Link audio
-    gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
+    gst::Element::link_many([
+        audio_source.upcast_ref(),
+        // &audio_converter,
+        // &audio_queue,
+        &audio_encoder,
+        &mux,
+    ])
+    .unwrap();
+
+    // let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(Mixer::default()));
 
     // * Draw callback
+    // let callback_audio_mixer = audio_mixer.clone();
+     // * Draw callback
     struct SharedPtr<T>(*mut T);
     unsafe impl<T> Send for SharedPtr<T> {}
     unsafe impl<T> Sync for SharedPtr<T> {}
@@ -131,18 +163,53 @@ pub fn stream<F>(
             Self(self.0)
         }
     }
-
     let draw_frame = SharedPtr(&mut draw_frame as *mut F);
-    video_overlay.connect("draw", false, move |args| {
-        unsafe {
-            (*draw_frame.clone().0)(
-                args[1].get::<cairo::Context>().unwrap(),
-                width as _,
-                height as _,
-            );
-        }
+    // let draw_frame = std::sync::Mutex::new(draw_frame);
+    video_overlay.connect("draw", false, move |args| unsafe {
+        println!("Frame!");
+        (*draw_frame.clone().0)(
+            args[1].get::<cairo::Context>().unwrap(),
+            width as _,
+            height as _,
+            // &mut callback_audio_mixer.clone().lock().unwrap(),
+        );
         None
     });
+
+    // * Audio callback
+    // audio_source.set_callbacks(
+    //     gst_app::AppSrcCallbacks::builder()
+    //         .need_data(move |src, _length| {
+    //             // let mut audio_mixer = audio_mixer.lock().unwrap();
+    //             // let mut samples = Vec::new();
+    //             // audio_mixer.voices.retain_mut(|voice| {
+    //             //     match voice.next_frame() {
+    //             //         Ok(minimp3::Frame {
+    //             //             data,
+    //             //             sample_rate,
+    //             //             channels,
+    //             //             ..
+    //             //         }) => {
+    //             //             for sample in data
+    //             //                 .chunks_exact(channels)
+    //             //                 .step_by((sample_rate as usize / audio_samplerate).max(1))
+    //             //             {
+    //             //                 samples
+    //             //                     .extend(sample.iter().map(|sample| *sample as f32 / 32767.0));
+    //             //             }
+    //             //         }
+    //             //         Err(minimp3::Error::Eof) => return false,
+    //             //         Err(e) => panic!("{:?}", e),
+    //             //     }
+    //             //     let buffer = gst::Buffer::from_slice(unsafe {
+    //             //         std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+    //             //     });
+    //             //     src.push_buffer(buffer).unwrap();
+    //             //     true
+    //             // });
+    //         })
+    //         .build(),
+    // );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 
@@ -152,7 +219,24 @@ pub fn stream<F>(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!("{}", err);
+                panic!(
+                    "Element {}:\n{}",
+                    err.src().map_or(String::from("None"), |elemen| elemen
+                        .name()
+                        .as_str()
+                        .to_owned()),
+                    err
+                );
+            }
+            MessageView::Warning(warning) => {
+                eprintln!(
+                    "Warning from element {}:\n{}",
+                    warning.src().map_or(String::from("None"), |elemen| elemen
+                        .name()
+                        .as_str()
+                        .to_owned()),
+                    warning
+                );
             }
             _ => (),
         }

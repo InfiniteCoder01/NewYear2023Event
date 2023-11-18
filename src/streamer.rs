@@ -172,31 +172,30 @@ pub fn stream<F>(
             .need_data(move |src, _length| {
                 println!("Playing...");
                 let mut audio_mixer = audio_mixer.lock().unwrap();
-                if let Some(voice) = &mut audio_mixer.voice {
+                let samples = if let Some(voice) = &mut audio_mixer.voice {
                     match voice.next_frame() {
                         Ok(minimp3::Frame {
                             data,
                             sample_rate,
                             channels,
                             ..
-                        }) => {
-                            let samples = data
-                                .into_iter()
-                                .map(|sample| sample as f32 / 32767.0)
-                                .collect::<Vec<_>>();
-
-                            let buffer = gst::Buffer::from_slice(unsafe {
-                                std::slice::from_raw_parts(
-                                    samples.as_ptr() as *const u8,
-                                    samples.len() * 4,
-                                )
-                            });
-                            src.push_buffer(buffer).unwrap();
+                        }) => data
+                            .into_iter()
+                            .map(|sample| sample as f32 / 32767.0)
+                            .collect::<Vec<_>>(),
+                        Err(minimp3::Error::Eof) => {
+                            audio_mixer.voice = None;
+                            vec![0_f32; 2]
                         }
-                        Err(minimp3::Error::Eof) => audio_mixer.voice = None,
                         Err(e) => panic!("{:?}", e),
                     }
-                }
+                } else {
+                    vec![0_f32; 2]
+                };
+                let buffer = gst::Buffer::from_slice(unsafe {
+                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+                });
+                src.push_buffer(buffer).unwrap();
             })
             .build(),
     );

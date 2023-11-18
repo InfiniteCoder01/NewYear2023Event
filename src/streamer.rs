@@ -85,17 +85,18 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
-    let audio_source = gst_app::AppSrc::builder()
-        .is_live(true)
-        .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32le, audio_samplerate as _, 2)
-                .build()
-                .unwrap()
-                .to_caps()
-                .unwrap(),
-        )
-        .format(gst::Format::Time)
-        .build();
+    // let audio_source = gst_app::AppSrc::builder()
+    //     .is_live(true)
+    //     .caps(
+    //         &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32le, audio_samplerate as _, 2)
+    //             .build()
+    //             .unwrap()
+    //             .to_caps()
+    //             .unwrap(),
+    //     )
+    //     .format(gst::Format::Time)
+    //     .build();
+    let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_queue = ElementFactory::make("queue")
         .property_from_str("leaky", "upstream")
@@ -165,39 +166,39 @@ pub fn stream<F>(
     });
 
     // * Audio callback
-    audio_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(move |src, _length| {
-                // let mut audio_mixer = audio_mixer.lock().unwrap();
-                // let mut samples = Vec::new();
-                // audio_mixer.voices.retain_mut(|voice| {
-                //     match voice.next_frame() {
-                //         Ok(minimp3::Frame {
-                //             data,
-                //             sample_rate,
-                //             channels,
-                //             ..
-                //         }) => {
-                //             for sample in data
-                //                 .chunks_exact(channels)
-                //                 .step_by((sample_rate as usize / audio_samplerate).max(1))
-                //             {
-                //                 samples
-                //                     .extend(sample.iter().map(|sample| *sample as f32 / 32767.0));
-                //             }
-                //         }
-                //         Err(minimp3::Error::Eof) => return false,
-                //         Err(e) => panic!("{:?}", e),
-                //     }
-                //     let buffer = gst::Buffer::from_slice(unsafe {
-                //         std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
-                //     });
-                //     src.push_buffer(buffer).unwrap();
-                //     true
-                // });
-            })
-            .build(),
-    );
+    // audio_source.set_callbacks(
+    //     gst_app::AppSrcCallbacks::builder()
+    //         .need_data(move |src, _length| {
+    //             // let mut audio_mixer = audio_mixer.lock().unwrap();
+    //             // let mut samples = Vec::new();
+    //             // audio_mixer.voices.retain_mut(|voice| {
+    //             //     match voice.next_frame() {
+    //             //         Ok(minimp3::Frame {
+    //             //             data,
+    //             //             sample_rate,
+    //             //             channels,
+    //             //             ..
+    //             //         }) => {
+    //             //             for sample in data
+    //             //                 .chunks_exact(channels)
+    //             //                 .step_by((sample_rate as usize / audio_samplerate).max(1))
+    //             //             {
+    //             //                 samples
+    //             //                     .extend(sample.iter().map(|sample| *sample as f32 / 32767.0));
+    //             //             }
+    //             //         }
+    //             //         Err(minimp3::Error::Eof) => return false,
+    //             //         Err(e) => panic!("{:?}", e),
+    //             //     }
+    //             //     let buffer = gst::Buffer::from_slice(unsafe {
+    //             //         std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
+    //             //     });
+    //             //     src.push_buffer(buffer).unwrap();
+    //             //     true
+    //             // });
+    //         })
+    //         .build(),
+    // );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

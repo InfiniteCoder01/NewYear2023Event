@@ -99,7 +99,7 @@ pub fn stream<F>(
         .build();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_queue = ElementFactory::make("queue")
-        // .property_from_str("leaky", "upstream")
+        .property_from_str("leaky", "upstream")
         .build()
         .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
@@ -156,7 +156,6 @@ pub fn stream<F>(
     let callback_audio_mixer = audio_mixer.clone();
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
-        println!("Frame!");
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
@@ -183,7 +182,11 @@ pub fn stream<F>(
                             audio_mixer.voice = None;
                             vec![0; 2]
                         }
-                        Err(e) => panic!("{:?}", e),
+                        Err(e) => {
+                            eprintln!("{:?}", e);
+                            audio_mixer.voice = None;
+                            vec![0; 2]
+                        }
                     }
                 } else {
                     vec![0; 2]

@@ -156,6 +156,7 @@ pub fn stream<F>(
     // let callback_audio_mixer = audio_mixer.clone();
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
+        println!("Frame!")
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,

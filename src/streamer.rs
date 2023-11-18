@@ -156,7 +156,7 @@ pub fn stream<F>(
     let callback_audio_mixer = audio_mixer.clone();
     // let draw_frame = SharedPtr(&mut draw_frame as *mut F);
     let draw_frame = std::sync::Mutex::new(draw_frame);
-    video_overlay.connect("draw", false, move |args| unsafe {
+    video_overlay.connect("draw", false, move |args| {
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
@@ -180,10 +180,11 @@ pub fn stream<F>(
                             ..
                         }) => {
                             let samples = data
-                                .into_iter()
-                                .map(|sample| sample as f32 / 32767.0)
-                                .collect::<Vec<_>>();
-
+                            .into_iter()
+                            .map(|sample| sample as f32 / 32767.0)
+                            .collect::<Vec<_>>();
+                        
+                        dbg!(samples.len());
                             let buffer = gst::Buffer::from_slice(unsafe {
                                 std::slice::from_raw_parts(
                                     samples.as_ptr() as *const u8,

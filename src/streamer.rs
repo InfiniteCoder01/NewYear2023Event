@@ -154,10 +154,20 @@ pub fn stream<F>(
 
     // * Draw callback
     // let callback_audio_mixer = audio_mixer.clone();
-    let draw_frame = std::sync::Mutex::new(draw_frame);
-    video_overlay.connect("draw", false, move |args| {
+     // * Draw callback
+    struct SharedPtr<T>(*mut T);
+    unsafe impl<T> Send for SharedPtr<T> {}
+    unsafe impl<T> Sync for SharedPtr<T> {}
+    impl<T> Clone for SharedPtr<T> {
+        fn clone(&self) -> Self {
+            Self(self.0)
+        }
+    }
+    let draw_frame = SharedPtr(&mut draw_frame as *mut F);
+    // let draw_frame = std::sync::Mutex::new(draw_frame);
+    video_overlay.connect("draw", false, move |args| unsafe {
         println!("Frame!");
-        draw_frame.lock().unwrap()(
+        draw_frame(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,

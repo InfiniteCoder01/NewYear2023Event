@@ -24,7 +24,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "appsrc ! queue ! audioconvert ! voaacenc bitrate=128000 ! mux."
+    //         "appsrc ! audioconvert ! queue ! voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -120,8 +120,8 @@ pub fn stream<F>(
             &mux,
             &rtmp_sink,
             audio_source.upcast_ref(),
-            &audio_queue,
             &audio_converter,
+            &audio_queue,
             &audio_encoder,
         ])
         .unwrap();
@@ -143,8 +143,8 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([
         audio_source.upcast_ref(),
-        &audio_queue,
         &audio_converter,
+        &audio_queue,
         &audio_encoder,
         &mux,
     ])
@@ -178,10 +178,7 @@ pub fn stream<F>(
                             sample_rate,
                             channels,
                             ..
-                        }) => {
-                            println!("Playing...");
-                            data
-                        }
+                        }) => data,
                         Err(minimp3::Error::Eof) => {
                             audio_mixer.voice = None;
                             vec![0; 2]

@@ -154,7 +154,6 @@ pub fn stream<F>(
 
     // * Draw callback
     let callback_audio_mixer = audio_mixer.clone();
-    // let draw_frame = SharedPtr(&mut draw_frame as *mut F);
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
         draw_frame.lock().unwrap()(
@@ -171,8 +170,8 @@ pub fn stream<F>(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, _length| {
                 let mut audio_mixer = audio_mixer.lock().unwrap();
+                println!("Playing...");
                 if let Some(voice) = &mut audio_mixer.voice {
-                    println!("Playing...");
                     match voice.next_frame() {
                         Ok(minimp3::Frame {
                             data,
@@ -211,7 +210,7 @@ pub fn stream<F>(
             MessageView::Error(err) => {
                 panic!(
                     "Element {}:\n{}",
-                    err.src().map_or(String::from("None"), |elemen| elemen
+                    err.src().map_or(String::from("None"), |element| element
                         .name()
                         .as_str()
                         .to_owned()),
@@ -221,7 +220,7 @@ pub fn stream<F>(
             MessageView::Warning(warning) => {
                 eprintln!(
                     "Warning from element {}:\n{}",
-                    warning.src().map_or(String::from("None"), |elemen| elemen
+                    warning.src().map_or(String::from("None"), |element| element
                         .name()
                         .as_str()
                         .to_owned()),

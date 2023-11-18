@@ -3,6 +3,7 @@ extern crate gstreamer_app as gst_app;
 extern crate gstreamer_audio as gst_audio;
 extern crate gstreamer_video as gst_video;
 
+use crate::mixer::Mixer;
 use gst::{prelude::*, Caps, ElementFactory};
 
 pub fn stream<F>(
@@ -14,7 +15,7 @@ pub fn stream<F>(
     rtmp_uri: &str,
     mut draw_frame: F,
 ) where
-    F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
+    F: FnMut(cairo::Context, f64, f64, &mut Mixer) + Send + Sync + 'static,
 {
     // let pipeline_str = format!(
     //     concat!(
@@ -23,7 +24,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "appsrc ! audioconvert ! queue ! voaacenc bitrate=128000 ! mux."
+    //         "appsrc ! audioconvert ! voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -85,19 +86,18 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
-    // let audio_source = gst_app::AppSrc::builder()
-    //     .is_live(true)
-    //     .caps(
-    //         &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32le, audio_samplerate as _, 2)
-    //             .build()
-    //             .unwrap()
-    //             .to_caps()
-    //             .unwrap(),
-    //     )
-    //     .format(gst::Format::Time)
-    //     .build();
-    let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
-    // let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
+    let audio_source = gst_app::AppSrc::builder()
+        .is_live(true)
+        .caps(
+            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::F32le, audio_samplerate as _, 2)
+                .build()
+                .unwrap()
+                .to_caps()
+                .unwrap(),
+        )
+        .format(gst::Format::Time)
+        .build();
+    let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     // let audio_queue = ElementFactory::make("queue")
     //     .property_from_str("leaky", "upstream")
     //     .build()
@@ -120,7 +120,7 @@ pub fn stream<F>(
             &mux,
             &rtmp_sink,
             audio_source.upcast_ref(),
-            // &audio_converter,
+            &audio_converter,
             // &audio_queue,
             &audio_encoder,
         ])
@@ -143,73 +143,62 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([
         audio_source.upcast_ref(),
-        // &audio_converter,
+        &audio_converter,
         // &audio_queue,
         &audio_encoder,
         &mux,
     ])
     .unwrap();
 
-    // let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(Mixer::default()));
+    let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(Mixer::default()));
 
     // * Draw callback
-    // let callback_audio_mixer = audio_mixer.clone();
-     // * Draw callback
-    struct SharedPtr<T>(*mut T);
-    unsafe impl<T> Send for SharedPtr<T> {}
-    unsafe impl<T> Sync for SharedPtr<T> {}
-    impl<T> Clone for SharedPtr<T> {
-        fn clone(&self) -> Self {
-            Self(self.0)
-        }
-    }
-    let draw_frame = SharedPtr(&mut draw_frame as *mut F);
-    // let draw_frame = std::sync::Mutex::new(draw_frame);
+    let callback_audio_mixer = audio_mixer.clone();
+    // let draw_frame = SharedPtr(&mut draw_frame as *mut F);
+    let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| unsafe {
-        println!("Frame!");
-        (*draw_frame.clone().0)(
+        draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
-            // &mut callback_audio_mixer.clone().lock().unwrap(),
+            &mut callback_audio_mixer.clone().lock().unwrap(),
         );
         None
     });
 
     // * Audio callback
-    // audio_source.set_callbacks(
-    //     gst_app::AppSrcCallbacks::builder()
-    //         .need_data(move |src, _length| {
-    //             // let mut audio_mixer = audio_mixer.lock().unwrap();
-    //             // let mut samples = Vec::new();
-    //             // audio_mixer.voices.retain_mut(|voice| {
-    //             //     match voice.next_frame() {
-    //             //         Ok(minimp3::Frame {
-    //             //             data,
-    //             //             sample_rate,
-    //             //             channels,
-    //             //             ..
-    //             //         }) => {
-    //             //             for sample in data
-    //             //                 .chunks_exact(channels)
-    //             //                 .step_by((sample_rate as usize / audio_samplerate).max(1))
-    //             //             {
-    //             //                 samples
-    //             //                     .extend(sample.iter().map(|sample| *sample as f32 / 32767.0));
-    //             //             }
-    //             //         }
-    //             //         Err(minimp3::Error::Eof) => return false,
-    //             //         Err(e) => panic!("{:?}", e),
-    //             //     }
-    //             //     let buffer = gst::Buffer::from_slice(unsafe {
-    //             //         std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 4)
-    //             //     });
-    //             //     src.push_buffer(buffer).unwrap();
-    //             //     true
-    //             // });
-    //         })
-    //         .build(),
-    // );
+    audio_source.set_callbacks(
+        gst_app::AppSrcCallbacks::builder()
+            .need_data(move |src, _length| {
+                let mut audio_mixer = audio_mixer.lock().unwrap();
+                if let Some(voice) = &mut audio_mixer.voice {
+                    match voice.next_frame() {
+                        Ok(minimp3::Frame {
+                            data,
+                            sample_rate,
+                            channels,
+                            ..
+                        }) => {
+                            let samples = data
+                                .into_iter()
+                                .map(|sample| sample as f32 / 32767.0)
+                                .collect::<Vec<_>>();
+
+                            let buffer = gst::Buffer::from_slice(unsafe {
+                                std::slice::from_raw_parts(
+                                    samples.as_ptr() as *const u8,
+                                    samples.len() * 4,
+                                )
+                            });
+                            src.push_buffer(buffer).unwrap();
+                        }
+                        Err(minimp3::Error::Eof) => audio_mixer.voice = None,
+                        Err(e) => panic!("{:?}", e),
+                    }
+                }
+            })
+            .build(),
+    );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

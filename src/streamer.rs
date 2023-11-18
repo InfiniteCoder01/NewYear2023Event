@@ -167,7 +167,7 @@ pub fn stream<F>(
     // let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| unsafe {
         println!("Frame!");
-        draw_frame(
+        (*draw_frame.0)(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,

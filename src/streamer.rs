@@ -97,11 +97,11 @@ pub fn stream<F>(
     //     .format(gst::Format::Time)
     //     .build();
     let audio_source = ElementFactory::make("audiotestsrc").build().unwrap();
-    let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
-    let audio_queue = ElementFactory::make("queue")
-        .property_from_str("leaky", "upstream")
-        .build()
-        .unwrap();
+    // let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
+    // let audio_queue = ElementFactory::make("queue")
+    //     .property_from_str("leaky", "upstream")
+    //     .build()
+    //     .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()

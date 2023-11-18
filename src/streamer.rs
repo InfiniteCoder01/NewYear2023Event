@@ -169,8 +169,8 @@ pub fn stream<F>(
     audio_source.set_callbacks(
         gst_app::AppSrcCallbacks::builder()
             .need_data(move |src, _length| {
-                let mut audio_mixer = audio_mixer.lock().unwrap();
                 println!("Playing...");
+                let mut audio_mixer = audio_mixer.lock().unwrap();
                 if let Some(voice) = &mut audio_mixer.voice {
                     match voice.next_frame() {
                         Ok(minimp3::Frame {

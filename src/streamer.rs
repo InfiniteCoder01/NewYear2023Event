@@ -99,7 +99,7 @@ pub fn stream<F>(
         .build();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_queue = ElementFactory::make("queue")
-        .property_from_str("leaky", "downstream")
+        // .property_from_str("leaky", "downstream")
         .build()
         .unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")

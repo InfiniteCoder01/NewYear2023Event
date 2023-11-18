@@ -98,7 +98,7 @@ pub fn stream<F>(
         .format(gst::Format::Time)
         .build();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
-    let audio_queue = ElementFactory::make("queue")
+    let audio_queue = ElementFactory::make("queue2")
         // .property_from_str("leaky", "downstream")
         .build()
         .unwrap();

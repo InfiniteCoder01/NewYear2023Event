@@ -69,6 +69,7 @@ fn main() {
             frame_index += 1;
 
             // * Audio
+            play::play("Assets/Aviators - Glow (Anthem Rock).mp3").unwrap();
             // if audio.silent() {
             //     audio.play("Assets/Aviators - Glow (Anthem Rock).mp3");
             //     println!("Play!");

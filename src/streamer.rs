@@ -23,7 +23,8 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "mixersource ! audioconvert ! voaacenc bitrate=128000 ! mux."
+    //         "pulsesrc device=\"alsa_output.platform-bcm2835_audio.analog-stereo.monitor\" ! ",
+    //         "voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -92,8 +93,6 @@ pub fn stream<F>(
         )
         .build()
         .unwrap();
-    let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
-    let audio_queue = ElementFactory::make("queue").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -111,9 +110,7 @@ pub fn stream<F>(
             &video_decoder,
             &mux,
             &rtmp_sink,
-            audio_source.upcast_ref(),
-            &audio_converter,
-            &audio_queue,
+            &audio_source,
             &audio_encoder,
         ])
         .unwrap();
@@ -133,14 +130,7 @@ pub fn stream<F>(
     .unwrap();
 
     // * Link audio
-    gst::Element::link_many([
-        audio_source.upcast_ref(),
-        &audio_converter,
-        &audio_queue,
-        &audio_encoder,
-        &mux,
-    ])
-    .unwrap();
+    gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
     // * Draw callback
     let draw_frame = std::sync::Mutex::new(draw_frame);

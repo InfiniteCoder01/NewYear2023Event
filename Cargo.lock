@@ -37,6 +37,12 @@ checksum = "4cbbc9d0964165b47557570cce6c952866c2678457aca742aafc9fb771d30270"
 
 [[package]]
 name = "bitflags"
+version = "1.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+
+[[package]]
+name = "bitflags"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
@@ -53,7 +59,7 @@ version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f33613627f0dea6a731b0605101fad59ba4f193a52c96c4687728d822605a8a1"
 dependencies = [
- "bitflags",
+ "bitflags 2.4.1",
  "cairo-sys-rs",
  "glib",
  "libc",
@@ -223,7 +229,7 @@ version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58cf801b6f7829fa76db37449ab67c9c98a2b1bf21076d9113225621e61a0fa6"
 dependencies = [
- "bitflags",
+ "bitflags 2.4.1",
  "futures-channel",
  "futures-core",
  "futures-executor",
@@ -552,6 +558,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mpg123-sys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a75c26239d85c1423091c109fcdabbcfaac868576dc018b0e959137217907610"
+dependencies = [
+ "bitflags 1.3.2",
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
 name = "muldiv"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -570,6 +587,7 @@ dependencies = [
  "gstreamer-video",
  "hhmmss",
  "minimp3",
+ "play",
  "serde",
  "toml",
 ]
@@ -620,6 +638,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "out123-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5da977be7c4b44e2ad26be779aafc1761a89bd2ee6e363770bb71eb67a00d2e5"
+dependencies = [
+ "libc",
+ "mpg123-sys",
+ "pkg-config",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -642,6 +671,17 @@ name = "pkg-config"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
+
+[[package]]
+name = "play"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c570085654588139e9ea2f452fe7dcb78d576da4f1c04d58b98b32fc42744ff0"
+dependencies = [
+ "libc",
+ "mpg123-sys",
+ "out123-sys",
+]
 
 [[package]]
 name = "pretty-hex"

@@ -69,10 +69,10 @@ fn main() {
             frame_index += 1;
 
             // * Audio
-            if audio.silent() {
-                audio.play("Assets/Aviators - Glow (Anthem Rock).mp3");
-                println!("Play!");
-            }
+            // if audio.silent() {
+            //     audio.play("Assets/Aviators - Glow (Anthem Rock).mp3");
+            //     println!("Play!");
+            // }
         },
     );
 }

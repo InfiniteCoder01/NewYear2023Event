@@ -67,7 +67,7 @@ mod imp {
             _buffer: Option<&mut gst::BufferRef>,
         ) -> Result<gst_base::subclass::base_src::CreateSuccess, gst::FlowError> {
             let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
-            let mut samples = vec![0_i16; 2];
+            let mut samples = vec![0_i16; 2048];
             if let Some(voice) = &mut audio_mixer.voice {
                 match voice.next_frame() {
                     Ok(minimp3::Frame {

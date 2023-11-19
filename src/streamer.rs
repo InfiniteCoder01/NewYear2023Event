@@ -34,8 +34,8 @@ pub fn stream<F>(
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
 
-    // let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
-    let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
+    let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
+    // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
     // * Source
     let (width, height) = size;

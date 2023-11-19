@@ -50,7 +50,6 @@ pub fn stream<F>(
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
-                .framerate(gst::Fraction::new(1, fps as _))
                 .build(),
         )
         .build()

@@ -3,12 +3,7 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-pub mod mixer;
-
-use std::sync::{Arc, Mutex};
-
 use gst::{prelude::*, Caps, ElementFactory};
-use mixer::Mixer;
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -19,7 +14,7 @@ pub fn stream<F>(
     rtmp_uri: &str,
     draw_frame: F,
 ) where
-    F: FnMut(cairo::Context, f64, f64, &mut Mixer) + Send + Sync + 'static,
+    F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {
     // let pipeline_str = format!(
     //     concat!(
@@ -90,9 +85,13 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
-    let audio_mixer = Arc::new(Mutex::new(Mixer::default()));
-    unsafe { mixer::source::MIXER = Some(audio_mixer.clone()) };
-    let audio_source = mixer::source::MixerSource::new();
+    let audio_source = ElementFactory::make("pulsesrc")
+        .property(
+            "device",
+            "alsa_output.platform-bcm2835_audio.analog-stereo.monitor",
+        )
+        .build()
+        .unwrap();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
     let audio_queue = ElementFactory::make("queue").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
@@ -144,13 +143,12 @@ pub fn stream<F>(
     .unwrap();
 
     // * Draw callback
-    let draw_frame = Mutex::new(draw_frame);
+    let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
-            &mut audio_mixer.lock().unwrap(),
         );
         None
     });

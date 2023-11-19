@@ -1,6 +1,7 @@
 pub mod streamer;
 
 use hhmmss::Hhmmss;
+use rodio::Source;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -8,9 +9,16 @@ pub struct Private {
     key: String,
 }
 
+pub fn load_audio(path: &str) -> rodio::Decoder<std::io::BufReader<std::fs::File>> {
+    rodio::Decoder::new(std::io::BufReader::new(std::fs::File::open(path).unwrap())).unwrap()
+}
+
 fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    let glow_anthem = load_audio("Assets/Aviators - Glow (Anthem Rock).mp3");
+    stream_handle.play_raw(glow_anthem.convert_samples()).unwrap();
 
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;
@@ -69,7 +77,6 @@ fn main() {
             frame_index += 1;
 
             // * Audio
-            play::play("Assets/Aviators - Glow (Anthem Rock).mp3").unwrap();
             // if audio.silent() {
             //     audio.play("Assets/Aviators - Glow (Anthem Rock).mp3");
             //     println!("Play!");

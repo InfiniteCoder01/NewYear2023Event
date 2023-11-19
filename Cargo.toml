@@ -11,11 +11,10 @@ gstreamer-video = "0.21.2"
 gstreamer-audio = "0.21.2"
 
 cairo-rs = "0.18.3"
-minimp3 = "0.5.1"
+rodio = "0.17.3"
 
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"
 
 hhmmss = "0.1.0"
 glib = "0.18.3"
-play = "0.5.3"

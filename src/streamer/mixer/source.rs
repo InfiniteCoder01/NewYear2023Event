@@ -66,30 +66,30 @@ mod imp {
             &self,
             _buffer: Option<&mut gst::BufferRef>,
         ) -> Result<gst_base::subclass::base_src::CreateSuccess, gst::FlowError> {
-            // let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
-            // let mut samples = vec![0_i16; 2];
-            // if let Some(voice) = &mut audio_mixer.voice {
-            //     match voice.next_frame() {
-            //         Ok(minimp3::Frame {
-            //             data,
-            //             sample_rate: _,
-            //             channels: _,
-            //             ..
-            //         }) => samples = data,
-            //         Err(minimp3::Error::Eof) => audio_mixer.voice = None,
-            //         Err(e) => {
-            //             eprintln!("{:?}", e);
-            //             audio_mixer.voice = None;
-            //         }
-            //     }
-            // }
-            // let buffer = gst::Buffer::from_slice(unsafe {
-            //     std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 2)
-            // });
-            // Ok(gst_base::subclass::base_src::CreateSuccess::NewBuffer(
-            //     buffer,
-            // ))
-            Ok(gst_base::subclass::base_src::CreateSuccess::FilledBuffer)
+            let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
+            let mut samples = vec![0_i16; 2];
+            if let Some(voice) = &mut audio_mixer.voice {
+                match voice.next_frame() {
+                    Ok(minimp3::Frame {
+                        data,
+                        sample_rate: _,
+                        channels: _,
+                        ..
+                    }) => samples = data,
+                    Err(minimp3::Error::Eof) => audio_mixer.voice = None,
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                        audio_mixer.voice = None;
+                    }
+                }
+            }
+            let buffer = gst::Buffer::from_slice(unsafe {
+                std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 2)
+            });
+            Ok(gst_base::subclass::base_src::CreateSuccess::NewBuffer(
+                buffer,
+            ))
+            // Ok(gst_base::subclass::base_src::CreateSuccess::FilledBuffer)
         }
 
         fn fill(&self, buffer: &mut gst::BufferRef) -> Result<gst::FlowSuccess, gst::FlowError> {

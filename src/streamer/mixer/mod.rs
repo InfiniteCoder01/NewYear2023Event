@@ -1,3 +1,5 @@
+pub mod source;
+
 #[derive(Default)]
 pub struct Mixer {
     pub voice: Option<minimp3::Decoder<std::fs::File>>,

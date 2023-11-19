@@ -1,5 +1,4 @@
 pub mod streamer;
-pub mod mixer;
 
 use hhmmss::Hhmmss;
 use serde::Deserialize;

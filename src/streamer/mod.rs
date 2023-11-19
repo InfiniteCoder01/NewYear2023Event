@@ -1,16 +1,20 @@
-extern crate gstreamer as gst;
-extern crate gstreamer_app as gst_app;
-extern crate gstreamer_audio as gst_audio;
-extern crate gstreamer_video as gst_video;
+pub extern crate gstreamer as gst;
+pub extern crate gstreamer_audio as gst_audio;
+pub extern crate gstreamer_base as gst_base;
+pub extern crate gstreamer_video as gst_video;
 
-use crate::mixer::Mixer;
+pub mod mixer;
+
+use std::sync::{Arc, Mutex};
+
 use gst::{prelude::*, Caps, ElementFactory};
+use mixer::Mixer;
 
 pub fn stream<F>(
     size: (usize, usize),
     fps: usize,
     video_bitrate: usize,
-    audio_samplerate: usize,
+    _audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
     draw_frame: F,
@@ -24,7 +28,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmpsink location={} ",
-    //         "appsrc ! audioconvert ! queue ! voaacenc bitrate=128000 ! mux."
+    //         "mixersource ! audioconvert ! voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
     //     width, height, fps,
@@ -86,22 +90,11 @@ pub fn stream<F>(
         .unwrap();
 
     // * Audio
-    let audio_source = gst_app::AppSrc::builder()
-        .is_live(true)
-        .caps(
-            &gst_audio::AudioInfo::builder(gst_audio::AudioFormat::S16le, audio_samplerate as _, 2)
-                .build()
-                .unwrap()
-                .to_caps()
-                .unwrap(),
-        )
-        .format(gst::Format::Time)
-        .build();
+    let audio_mixer = Arc::new(Mutex::new(Mixer::default()));
+    unsafe { mixer::source::MIXER = Some(audio_mixer.clone()) };
+    let audio_source = mixer::source::MixerSource::new();
     let audio_converter = ElementFactory::make("audioconvert").build().unwrap();
-    let audio_queue = ElementFactory::make("queue")
-        .property_from_str("leaky", "upstream")
-        .build()
-        .unwrap();
+    let audio_queue = ElementFactory::make("queue").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -150,54 +143,17 @@ pub fn stream<F>(
     ])
     .unwrap();
 
-    let audio_mixer = std::sync::Arc::new(std::sync::Mutex::new(Mixer::default()));
-
     // * Draw callback
-    let callback_audio_mixer = audio_mixer.clone();
-    let draw_frame = std::sync::Mutex::new(draw_frame);
+    let draw_frame = Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
-            &mut callback_audio_mixer.clone().lock().unwrap(),
+            &mut audio_mixer.lock().unwrap(),
         );
         None
     });
-
-    // * Audio callback
-    audio_source.set_callbacks(
-        gst_app::AppSrcCallbacks::builder()
-            .need_data(move |src, _length| {
-                let mut audio_mixer = audio_mixer.lock().unwrap();
-                let samples = if let Some(voice) = &mut audio_mixer.voice {
-                    match voice.next_frame() {
-                        Ok(minimp3::Frame {
-                            data,
-                            sample_rate,
-                            channels,
-                            ..
-                        }) => data,
-                        Err(minimp3::Error::Eof) => {
-                            audio_mixer.voice = None;
-                            vec![0; 2]
-                        }
-                        Err(e) => {
-                            eprintln!("{:?}", e);
-                            audio_mixer.voice = None;
-                            vec![0; 2]
-                        }
-                    }
-                } else {
-                    vec![0; 2]
-                };
-                let buffer = gst::Buffer::from_slice(unsafe {
-                    std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 2)
-                });
-                src.push_buffer(buffer).unwrap();
-            })
-            .build(),
-    );
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

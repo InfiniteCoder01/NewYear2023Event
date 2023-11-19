@@ -562,6 +562,7 @@ name = "new-year-2024"
 version = "0.1.0"
 dependencies = [
  "cairo-rs",
+ "glib",
  "gstreamer",
  "gstreamer-app",
  "gstreamer-audio",

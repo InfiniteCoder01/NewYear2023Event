@@ -25,7 +25,7 @@ fn main() {
         44100,
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
-        move |context, width, height, audio| {
+        move |context, width, height, _audio| {
             let frame_time = last_frame.elapsed();
             last_frame = std::time::Instant::now();
             frame_times[frame_index % frame_times.len()] = frame_time.as_micros();

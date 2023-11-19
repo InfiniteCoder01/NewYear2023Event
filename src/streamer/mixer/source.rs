@@ -9,7 +9,8 @@ mod imp {
 
     #[derive(Default)]
     pub struct MixerSource {
-        buffer: std::sync::Mutex<Vec<u8>>,
+        // buffer: std::sync::Mutex<Vec<u8>>,
+        time: std::sync::Mutex<gst::ClockTime>,
     }
 
     #[glib::object_subclass]
@@ -60,7 +61,24 @@ mod imp {
         }
     }
 
-    impl BaseSrcImpl for MixerSource {}
+    impl BaseSrcImpl for MixerSource {
+        fn is_seekable(&self) -> bool {
+            false
+        }
+
+        fn times(
+            &self,
+            buffer: &gst::BufferRef,
+        ) -> (Option<gst::ClockTime>, Option<gst::ClockTime>) {
+            let duration =
+                gst::ClockTime::from_seconds_f32(buffer.size() as f32 / 2.0 / 2.0 / 44100.0);
+            let mut current_time = self.time.lock().unwrap();
+            let start = *current_time;
+            *current_time = start + duration;
+            (Some(start), Some(*current_time))
+        }
+    }
+
     impl PushSrcImpl for MixerSource {
         fn create(
             &self,

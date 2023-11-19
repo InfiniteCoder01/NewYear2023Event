@@ -67,6 +67,7 @@ mod imp {
             length: u32,
             buffer: &mut gst::BufferRef,
         ) -> Result<gst::FlowSuccess, gst::FlowError> {
+            println!("Fill: BaseSrc!");
             let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
             let mut inner_buffer = self.buffer.lock().unwrap();
             while inner_buffer.len() < length as usize {
@@ -105,6 +106,7 @@ mod imp {
             &self,
             _buffer: Option<&mut gst::BufferRef>,
         ) -> Result<gst_base::subclass::base_src::CreateSuccess, gst::FlowError> {
+            println!("Create: PushSrc!");
             let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
             let mut samples = vec![0_i16; 2];
             if let Some(voice) = &mut audio_mixer.voice {
@@ -132,6 +134,7 @@ mod imp {
         }
 
         fn fill(&self, buffer: &mut gst::BufferRef) -> Result<gst::FlowSuccess, gst::FlowError> {
+            println!("Fill: PushSrc!");
             let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
             let mut inner_buffer = self.buffer.lock().unwrap();
             while inner_buffer.len() < buffer.size() {

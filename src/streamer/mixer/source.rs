@@ -9,7 +9,7 @@ mod imp {
 
     #[derive(Default)]
     pub struct MixerSource {
-        buffer: std::sync::Mutex<Vec<u8>>,
+        // buffer: std::sync::Mutex<Vec<u8>>,
     }
 
     #[glib::object_subclass]
@@ -62,43 +62,72 @@ mod imp {
 
     impl BaseSrcImpl for MixerSource {}
     impl PushSrcImpl for MixerSource {
-        fn fill(&self, buffer: &mut gst::BufferRef) -> Result<gst::FlowSuccess, gst::FlowError> {
+        fn create(
+            &self,
+            _buffer: Option<&mut gst::BufferRef>,
+        ) -> Result<gst_base::subclass::base_src::CreateSuccess, gst::FlowError> {
             let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
-            let mut inner_buffer = self.buffer.lock().unwrap();
-            while inner_buffer.len() < buffer.size() {
-                if let Some(voice) = &mut audio_mixer.voice {
-                    match voice.next_frame() {
-                        Ok(minimp3::Frame {
-                            data,
-                            sample_rate: _,
-                            channels: _,
-                            ..
-                        }) => {
-                            inner_buffer
-                                .extend(data.iter().flat_map(|sample| sample.to_le_bytes()));
-                            continue;
-                        }
-                        Err(minimp3::Error::Eof) => {
-                            audio_mixer.voice = None;
-                        }
-                        Err(e) => {
-                            eprintln!("{:?}", e);
-                            audio_mixer.voice = None;
-                        }
+            let mut samples = vec![0_i16; 2];
+            if let Some(voice) = &mut audio_mixer.voice {
+                match voice.next_frame() {
+                    Ok(minimp3::Frame {
+                        data,
+                        sample_rate: _,
+                        channels: _,
+                        ..
+                    }) => samples = data,
+                    Err(minimp3::Error::Eof) => audio_mixer.voice = None,
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                        audio_mixer.voice = None;
                     }
                 }
-                let need = buffer.size() - inner_buffer.len();
-                inner_buffer.extend(std::iter::repeat(0).take(need));
             }
-            let need = buffer.size();
-            buffer
-                .map_writable()
-                .unwrap()
-                .as_mut_slice()
-                .copy_from_slice(&inner_buffer[..need]);
-            inner_buffer.drain(..need);
-            Ok(gst::FlowSuccess::Ok)
+            let buffer = gst::Buffer::from_slice(unsafe {
+                std::slice::from_raw_parts(samples.as_ptr() as *const u8, samples.len() * 2)
+            });
+            Ok(gst_base::subclass::base_src::CreateSuccess::NewBuffer(
+                buffer,
+            ))
         }
+
+        // fn fill(&self, buffer: &mut gst::BufferRef) -> Result<gst::FlowSuccess, gst::FlowError> {
+        //     let mut audio_mixer = unsafe { MIXER.as_ref() }.unwrap().lock().unwrap();
+        //     let mut inner_buffer = self.buffer.lock().unwrap();
+        //     while inner_buffer.len() < buffer.size() {
+        //         if let Some(voice) = &mut audio_mixer.voice {
+        //             match voice.next_frame() {
+        //                 Ok(minimp3::Frame {
+        //                     data,
+        //                     sample_rate: _,
+        //                     channels: _,
+        //                     ..
+        //                 }) => {
+        //                     inner_buffer
+        //                         .extend(data.iter().flat_map(|sample| sample.to_le_bytes()));
+        //                     continue;
+        //                 }
+        //                 Err(minimp3::Error::Eof) => {
+        //                     audio_mixer.voice = None;
+        //                 }
+        //                 Err(e) => {
+        //                     eprintln!("{:?}", e);
+        //                     audio_mixer.voice = None;
+        //                 }
+        //             }
+        //         }
+        //         let need = buffer.size() - inner_buffer.len();
+        //         inner_buffer.extend(std::iter::repeat(0).take(need));
+        //     }
+        //     let need = buffer.size();
+        //     buffer
+        //         .map_writable()
+        //         .unwrap()
+        //         .as_mut_slice()
+        //         .copy_from_slice(&inner_buffer[..need]);
+        //     inner_buffer.drain(..need);
+        //     Ok(gst::FlowSuccess::Ok)
+        // }
     }
 }
 
@@ -132,7 +161,6 @@ gst::plugin_define!(
     "Mixer Source for my pipeline",
     register,
     "1.0.0",
-    // FIXME: MPL-2.0 is only allowed since 1.18.3 (as unknown) and 1.20 (as known)
     "MPL",
     "mixersource",
     "mixersource",

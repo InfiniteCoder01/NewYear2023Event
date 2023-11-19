@@ -16,9 +16,9 @@ pub fn load_audio(path: &str) -> rodio::Decoder<std::io::BufReader<std::fs::File
 fn main() {
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
-    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-    let glow_anthem = load_audio("Assets/Aviators - Glow (Anthem Rock).mp3");
-    stream_handle.play_raw(glow_anthem.convert_samples()).unwrap();
+    // let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    // let glow_anthem = load_audio("Assets/Aviators - Glow (Anthem Rock).mp3");
+    // stream_handle.play_raw(glow_anthem.convert_samples()).unwrap();
 
     let stream_start = std::time::Instant::now();
     let mut frame_index = 0;

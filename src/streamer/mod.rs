@@ -146,6 +146,7 @@ pub fn stream<F>(
     // * Draw callback
     let draw_frame = Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
+        println!("Frame!");
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,

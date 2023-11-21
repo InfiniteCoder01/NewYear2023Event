@@ -169,6 +169,16 @@ pub fn stream<F>(
                     warning
                 );
             }
+            MessageView::Info(info) => {
+                eprintln!(
+                    "Info from element {}:\n{}",
+                    info.src().map_or(String::from("None"), |element| element
+                        .name()
+                        .as_str()
+                        .to_owned()),
+                    info
+                );
+            }
             _ => (),
         }
     }

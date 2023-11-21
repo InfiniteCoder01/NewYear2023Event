@@ -18,7 +18,7 @@ pub fn stream<F>(
 {
     // let pipeline_str = format!(
     //     concat!(
-    //         "cairooverlay ! ",
+    //         "videotestsrc pattern=black ! cairooverlay ! ",
     //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
@@ -79,7 +79,7 @@ pub fn stream<F>(
         .unwrap();
 
     // * Sink
-    let rtmp_sink = ElementFactory::make("rtmpsink")
+    let rtmp_sink = ElementFactory::make("rtmp2sink")
         .property("location", rtmp_uri)
         .build()
         .unwrap();

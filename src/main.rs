@@ -26,7 +26,8 @@ fn main() {
     let mut frame_times = [0u128; 30];
     streamer::stream(
         // (1920, 1080),
-        (1280, 720),
+        // (1280, 720),
+        (640, 480),
         7000, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
         44100,
         128000,

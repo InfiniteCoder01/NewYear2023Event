@@ -79,7 +79,7 @@ pub fn stream<F>(
         .unwrap();
 
     // * Sink
-    let rtmp_sink = ElementFactory::make("rtmp2sink")
+    let rtmp_sink = ElementFactory::make("rtmpsink")
         .property("location", rtmp_uri)
         .build()
         .unwrap();

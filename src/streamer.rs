@@ -36,7 +36,6 @@ pub fn stream<F>(
     let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
     // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
-    println!("Creating...");
     // * Source
     let (width, height) = size;
     let background = ElementFactory::make("videotestsrc")
@@ -98,7 +97,6 @@ pub fn stream<F>(
         .build()
         .unwrap();
 
-    println!("Adding...");
     // * Add
     pipeline
         .add_many([
@@ -116,7 +114,6 @@ pub fn stream<F>(
         ])
         .unwrap();
 
-    println!("Linking...");
     // * Link video
     gst::Element::link_many([
         &background,
@@ -134,19 +131,20 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
-    println!("Callback!");
     // * Draw callback
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
+        println!("Frame start");
+
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
         );
+        println!("Frame end");
+
         None
     });
-
-    println!("Ready!");
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

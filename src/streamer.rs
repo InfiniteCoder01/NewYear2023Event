@@ -79,7 +79,7 @@ pub fn stream<F>(
 
     // * Sink
     let rtmp_sink = ElementFactory::make("rtmp2sink")
-        .property("async-connect", true)
+        .property("async-connect", false)
         .property("location", rtmp_uri)
         .build()
         .unwrap();
@@ -135,7 +135,6 @@ pub fn stream<F>(
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
         println!("Frame start");
-
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,

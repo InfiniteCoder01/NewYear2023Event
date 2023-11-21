@@ -7,7 +7,6 @@ use gst::{prelude::*, Caps, ElementFactory};
 
 pub fn stream<F>(
     size: (usize, usize),
-    fps: usize,
     video_bitrate: usize,
     _audio_samplerate: usize,
     audio_bitrate: usize,
@@ -22,7 +21,7 @@ pub fn stream<F>(
     //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
-    //         "rtmpsink location={} ",
+    //         "rtmp2sink location={} ",
     //         "pulsesrc device=\"alsa_output.platform-bcm2835_audio.analog-stereo.monitor\" ! ",
     //         "voaacenc bitrate=128000 ! mux."
     //     ),
@@ -37,6 +36,7 @@ pub fn stream<F>(
     let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
     // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
 
+    println!("Creating...");
     // * Source
     let (width, height) = size;
     let background = ElementFactory::make("videotestsrc")
@@ -80,6 +80,7 @@ pub fn stream<F>(
 
     // * Sink
     let rtmp_sink = ElementFactory::make("rtmp2sink")
+        .property("async-connect", true)
         .property("location", rtmp_uri)
         .build()
         .unwrap();
@@ -97,6 +98,7 @@ pub fn stream<F>(
         .build()
         .unwrap();
 
+    println!("Adding...");
     // * Add
     pipeline
         .add_many([
@@ -114,6 +116,7 @@ pub fn stream<F>(
         ])
         .unwrap();
 
+    println!("Linking...");
     // * Link video
     gst::Element::link_many([
         &background,
@@ -131,6 +134,7 @@ pub fn stream<F>(
     // * Link audio
     gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
 
+    println!("Callback!");
     // * Draw callback
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
@@ -141,6 +145,8 @@ pub fn stream<F>(
         );
         None
     });
+
+    println!("Ready!");
 
     pipeline.set_state(gst::State::Playing).unwrap();
 

@@ -1,7 +1,7 @@
 pub mod streamer;
 
 use hhmmss::Hhmmss;
-use rodio::Source;
+// use rodio::Source;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -27,7 +27,6 @@ fn main() {
     streamer::stream(
         // (1920, 1080),
         (1280, 720),
-        30,
         7000, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
         44100,
         128000,

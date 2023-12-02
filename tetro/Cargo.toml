@@ -1,0 +1,15 @@
+[package]
+name = "tetro"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+scheduler = { path = "../scheduler" }
+cairo-rs = "0.18.3"
+rodio = "0.17.3"
+
+warp = "0.3.6"
+tokio = { version = "1.34.0", features = ["full"] }

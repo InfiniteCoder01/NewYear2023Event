@@ -12,6 +12,7 @@ pub fn stream<F>(
     audio_bitrate: usize,
     rtmp_uri: &str,
     draw_frame: F,
+    virtual_mode: bool,
 ) where
     F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {
@@ -22,7 +23,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmp2sink location={} ",
-    //         "pulsesrc device=\"alsa_output.platform-bcm2835_audio.analog-stereo.monitor\" ! ",
+    //         "pulsesrc ! ",
     //         "voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
@@ -79,27 +80,67 @@ pub fn stream<F>(
 
     // * Sink
     let rtmp_sink = ElementFactory::make("rtmp2sink")
-        .property("async-connect", false)
         .property("location", rtmp_uri)
         .build()
         .unwrap();
 
     // * Audio
-    let audio_source = ElementFactory::make("pulsesrc")
-        .property(
-            "device",
-            "alsa_output.platform-bcm2835_audio.analog-stereo.monitor",
-        )
-        .build()
-        .unwrap();
+    let audio_source = ElementFactory::make("pulsesrc").build().unwrap();
     let audio_encoder = ElementFactory::make("voaacenc")
         .property("bitrate", audio_bitrate as i32)
         .build()
         .unwrap();
 
-    // * Add
-    pipeline
-        .add_many([
+    // * Virtual mode
+    let basic_video_sink = ElementFactory::make("autovideosink").build().unwrap();
+    let basic_audio_sink = ElementFactory::make("autoaudiosink").build().unwrap();
+
+    if virtual_mode {
+        // * Add elements
+        pipeline
+            .add_many([
+                &background,
+                &video_overlay,
+                &source_caps_filter,
+                &videoconvert,
+                &basic_video_sink,
+                &audio_source,
+                &basic_audio_sink,
+            ])
+            .unwrap();
+
+        // * Link video
+        gst::Element::link_many([
+            &background,
+            &video_overlay,
+            &source_caps_filter,
+            &videoconvert,
+            &basic_video_sink,
+        ])
+        .unwrap();
+
+        // * Link audio
+        gst::Element::link_many([&audio_source, &basic_audio_sink]).unwrap();
+    } else {
+        // * Add elements
+        pipeline
+            .add_many([
+                &background,
+                &video_overlay,
+                &source_caps_filter,
+                &videoconvert,
+                &youtube_caps_filter,
+                &video_encoder,
+                &video_decoder,
+                &mux,
+                &rtmp_sink,
+                &audio_source,
+                &audio_encoder,
+            ])
+            .unwrap();
+
+        // * Link video
+        gst::Element::link_many([
             &background,
             &video_overlay,
             &source_caps_filter,
@@ -109,39 +150,21 @@ pub fn stream<F>(
             &video_decoder,
             &mux,
             &rtmp_sink,
-            &audio_source,
-            &audio_encoder,
         ])
         .unwrap();
 
-    // * Link video
-    gst::Element::link_many([
-        &background,
-        &video_overlay,
-        &source_caps_filter,
-        &videoconvert,
-        &youtube_caps_filter,
-        &video_encoder,
-        &video_decoder,
-        &mux,
-        &rtmp_sink,
-    ])
-    .unwrap();
-
-    // * Link audio
-    gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
+        // * Link audio
+        gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
+    }
 
     // * Draw callback
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
-        println!("Frame start");
         draw_frame.lock().unwrap()(
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
         );
-        println!("Frame end");
-
         None
     });
 

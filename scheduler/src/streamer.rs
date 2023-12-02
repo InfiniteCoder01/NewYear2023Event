@@ -34,8 +34,8 @@ pub fn stream<F>(
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
 
-    let (enc, parse, cvt) = ("x264enc", "h264parse", "v4l2convert");
-    // let (enc, parse, cvt) = ("x264enc", "h264parse", "videoconvert");
+    let (enc, parse, cvt, audioenc) = ("x264enc", "h264parse", "v4l2convert", "voaacenc");
+    // let (enc, parse, cvt, audioenc) = ("x264enc", "h264parse", "videoconvert", "faac");
 
     // * Source
     let (width, height) = size;
@@ -86,7 +86,7 @@ pub fn stream<F>(
 
     // * Audio
     let audio_source = ElementFactory::make("pulsesrc").build().unwrap();
-    let audio_encoder = ElementFactory::make("voaacenc")
+    let audio_encoder = ElementFactory::make(audioenc)
         .property("bitrate", audio_bitrate as i32)
         .build()
         .unwrap();

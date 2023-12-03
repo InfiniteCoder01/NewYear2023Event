@@ -168,7 +168,7 @@ pub fn stream<F>(
         None
     });
 
-    pipeline.set_state(gst::State::Playing).unwrap();
+    let result = pipeline.set_state(gst::State::Playing);
 
     for msg in pipeline.bus().unwrap().iter_timed(gst::ClockTime::NONE) {
         use gst::MessageView;
@@ -208,6 +208,8 @@ pub fn stream<F>(
             _ => (),
         }
     }
+
+    result.unwrap();
 
     pipeline.set_state(gst::State::Null).unwrap();
 }

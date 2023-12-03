@@ -34,8 +34,11 @@ pub fn stream<F>(
     gst::init().unwrap();
     let pipeline = gst::Pipeline::default();
 
-    let (enc, parse, cvt, audioenc) = ("x264enc", "h264parse", "v4l2convert", "voaacenc");
-    // let (enc, parse, cvt, audioenc) = ("x264enc", "h264parse", "videoconvert", "faac");
+    let (enc, parse, cvt, audioenc) = if virtual_mode {
+        ("x264enc", "h264parse", "videoconvert", "faac")
+    } else {
+        ("x264enc", "h264parse", "v4l2convert", "voaacenc")
+    };
 
     // * Source
     let (width, height) = size;
@@ -93,7 +96,7 @@ pub fn stream<F>(
 
     // * Virtual mode
     let basic_video_sink = ElementFactory::make("autovideosink").build().unwrap();
-    let basic_audio_sink = ElementFactory::make("autoaudiosink").build().unwrap();
+    // let basic_audio_sink = ElementFactory::make("autoaudiosink").build().unwrap();
 
     if virtual_mode {
         // * Add elements
@@ -104,8 +107,8 @@ pub fn stream<F>(
                 &source_caps_filter,
                 &videoconvert,
                 &basic_video_sink,
-                &audio_source,
-                &basic_audio_sink,
+                // &audio_source,
+                // &basic_audio_sink,
             ])
             .unwrap();
 
@@ -120,7 +123,7 @@ pub fn stream<F>(
         .unwrap();
 
         // * Link audio
-        gst::Element::link_many([&audio_source, &basic_audio_sink]).unwrap();
+        // gst::Element::link_many([&audio_source, &basic_audio_sink]).unwrap();
     } else {
         // * Add elements
         pipeline

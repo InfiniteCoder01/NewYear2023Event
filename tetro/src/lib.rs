@@ -5,9 +5,9 @@ use warp::Filter;
 pub extern "C" fn load() {
     let tr = tokio::runtime::Runtime::new().unwrap();
     tr.spawn(async {
-        let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
-
-        warp::serve(hello).run(([127, 0, 0, 1], 3030)).await;
+        println!("Starting server...");
+        let hello = warp::path::end().map(|| "Hello, IC!");
+        warp::serve(hello).run(([127, 0, 0, 1], 8080)).await;
     });
 }
 

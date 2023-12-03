@@ -8,6 +8,16 @@ pub struct Private {
 }
 
 fn main() {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    let env = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "scheduler=trace".into());
+    let fmt = tracing_subscriber::fmt::layer().pretty().with_target(true);
+    tracing_subscriber::registry().with(fmt).with(env).init();
+    // let subscriber = tracing_subscriber::FmtSubscriber::builder()
+    //     .with_max_level(tracing::Level::TRACE)
+    //     .finish();
+
     let private: Private =
         toml::from_str(&std::fs::read_to_string("private.toml").unwrap()).unwrap();
 
@@ -78,6 +88,7 @@ fn main() {
                 for (file, time) in schedule.iter().rev() {
                     if &Local::now() >= time {
                         if !file.is_empty() {
+                            tracing::info!("Loading plugin {}", file);
                             plugin = Some((file.clone(), Plugin::load(file)));
                         }
                         break;
@@ -85,6 +96,6 @@ fn main() {
                 }
             }
         },
-        false,
+        true,
     );
 }

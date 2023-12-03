@@ -23,7 +23,7 @@ pub fn stream<F>(
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmp2sink location={} ",
-    //         "pulsesrc ! audioconvert ! ",
+    //         "pulsesrc ! ",
     //         "voaacenc bitrate=128000 ! mux."
     //     ),
     //     width, height, fps,
@@ -86,7 +86,6 @@ pub fn stream<F>(
 
     // * Audio
     let audio_source = ElementFactory::make("pulsesrc").build().unwrap();
-    let audio_convert = ElementFactory::make("audioconvert").build().unwrap();
     let audio_encoder = ElementFactory::make(audioenc)
         .property("bitrate", audio_bitrate as i32)
         .build()
@@ -106,7 +105,6 @@ pub fn stream<F>(
                 &videoconvert,
                 &basic_video_sink,
                 &audio_source,
-                &audio_convert,
                 &basic_audio_sink,
             ])
             .unwrap();
@@ -122,7 +120,7 @@ pub fn stream<F>(
         .unwrap();
 
         // * Link audio
-        gst::Element::link_many([&audio_source, &audio_convert, &basic_audio_sink]).unwrap();
+        gst::Element::link_many([&audio_source, &basic_audio_sink]).unwrap();
     } else {
         // * Add elements
         pipeline
@@ -137,7 +135,6 @@ pub fn stream<F>(
                 &mux,
                 &rtmp_sink,
                 &audio_source,
-                &audio_convert,
                 &audio_encoder,
             ])
             .unwrap();
@@ -157,7 +154,7 @@ pub fn stream<F>(
         .unwrap();
 
         // * Link audio
-        gst::Element::link_many([&audio_source, &audio_convert, &audio_encoder, &mux]).unwrap();
+        gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
     }
 
     // * Draw callback

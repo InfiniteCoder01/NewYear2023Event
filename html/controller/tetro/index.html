@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- !META -->
+    <title>Controller - Tetris</title>
+</head>
+
+<body>
+    <!-- !NAV -->
+
+    <script>
+        let socket;
+        requireAuth(() => {
+            socket = new WebSocket(
+                `ws://${document.location.host}/connect/tetro/${account.uid}`,
+                "protocolOne",
+            );
+            socket.onmessage = message => console.log(message.data);
+            socket.send("Test");
+        });
+    </script>
+</body>
+
+</html>

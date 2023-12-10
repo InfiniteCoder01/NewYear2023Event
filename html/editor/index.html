@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Code editor</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.0/src-min-noconflict/ace.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/ace-builds@1.32.0/css/ace.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.0/src-min-noconflict/ext-language_tools.js"
+    type="text/javascript" charset="utf-8"></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="/editor/editor.css" rel="stylesheet">
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="/account/auth.js"></script>
+</head>
+
+<body>
+  <div id="panel" class="styled-container panel">
+    <button id="run-button" class="styled-item panel-item icon-button"><i class="fa fa-play"></i></button>
+    <select id="language-selector" class="styled-item panel-item"></select>
+    <button id="settings-button" class="styled-item panel-item icon-button" style="float: right;"><i
+        class="fa fa-gear"></i></button>
+    <a href="https://ace.c9.io/" class="styled-item panel-item link" style="float: right;">Powered by Ace</a>
+  </div>
+  <div id="editor">function foo(items) {
+    var x = "All this is syntax highlighted";
+    return x;
+    }</div>
+
+  <div id="console" class="styled-container">
+  </div>
+  <input id="console-input" class="styled-item" />
+
+  <div id="settings-modal" class="styled-container modal">
+    <h2>Settings</h2>
+    <select id="theme-selector" class="styled-item modal-item"></select>
+    <select id="keybinds-selector" class="styled-item modal-item"></select>
+    <input type="number" id="font-size-input" class="styled-item modal-item" />
+    <a href="#" rel="modal:close" class="styled-item modal-item abutton">Close</a>
+  </div>
+
+  <script type="module" src="editor/editor.js"></script>
+</body>
+
+</html>

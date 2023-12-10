@@ -1,2 +1,2 @@
-03.12.2023 13:00:00| target/release/libtetro.so
-05.12.2023 15:00:00|
+03.12.2023 13:00:00| target/debug/libtetro.so Hello, World!
+10.12.2023 15:00:00|

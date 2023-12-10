@@ -1,0 +1,87 @@
+:root {
+    --panel-height: 60px;
+    --console-height: 200px;
+    --console-input-height: 30px;
+}
+
+/* Classes */
+.panel-item {
+    float: left;
+}
+
+.modal-item {
+    display: block;
+}
+
+.styled-item {
+    padding: 15px 20px;
+    margin: 6px 6px;
+    border-radius: 5px;
+    border-width: 0;
+}
+
+/* Buttons & Links */
+.icon-button {
+    text-align: center;
+    font-size: 2em;
+    padding: 1px 12px;
+}
+
+.abutton {
+    text-decoration: none;
+    padding: 8px 14px;
+    margin: 20px 0px;
+    border-radius: 5px;
+    width: fit-content;
+}
+
+.link {
+    color: red;
+}
+
+/* ELEMENTS */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#panel {
+    height: var(--panel-height);
+    vertical-align: middle;
+}
+
+#editor {
+    position: absolute;
+    top: var(--panel-height);
+    bottom: var(--console-height);
+    left: 0;
+    right: 0;
+    padding: 5px;
+}
+
+#console {
+    overflow: scroll;
+    position: absolute;
+    height: calc(var(--console-height) - var(--console-input-height));
+    bottom: var(--console-input-height);
+    left: 0;
+    right: 0;
+}
+
+#console-input {
+    overflow: scroll;
+    position: absolute;
+    height: var(--console-input-height);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+
+    padding: 1px;
+    margin: 0;
+    border-radius: 0;
+}
+
+#console-input:focus {
+    outline: none;
+}

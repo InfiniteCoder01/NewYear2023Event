@@ -4,21 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+simplelog = "0.12.1"
+log = "0.4.20"
+
 gstreamer = { version = "0.21.2" }
 gstreamer-base = "0.21.2"
 gstreamer-app = { version = "0.21.2" }
 gstreamer-video = "0.21.2"
 gstreamer-audio = "0.21.2"
+glib = "0.18.3"
 
 cairo-rs = "0.18.3"
-rodio = "0.17.3"
 
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"
+libloading = "0.8.1"
 
 hhmmss = "0.1.0"
-glib = "0.18.3"
-libloading = "0.8.1"
 chrono = "0.4.31"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+tokio = { version = "1.0.0", features = ["full"] }
+warp = "0.3.6"

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Your Account</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="/account/auth.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <a href="/account" class="navbar-item">
+                    <span class="icon"><i class="fa fa-user"></i></span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container is-widescreen">
+        <h1 class="title"></h1>
+        <div class="buttons">
+            <button id="logout-button" class="button is-hidden">Logout</button>
+        </div>
+        <div class="buttons">
+            <button id="delete-account-button" class="button is-danger">Delete Account</button>
+            <button id="upgrade-anonymous-account-button" class="button is-hidden">Upgrade anonymous</button>
+        </div>
+    </div>
+
+    <div id="delete-confirmation-modal" class="modal">
+        <h1 class="title is-danger">All your code will be lost!</h1>
+        Do you really want to delete your account?
+        <div class="buttons">
+            <button id="confirm-delete-account" class="button is-danger">Yes</button>
+            <a href="#" rel="modal:close" class="button">No</a>
+        </div>
+    </div>
+
+    <script>
+        requireAuth(() => {
+            $("h1.title").text(`Hello, ${account.displayName || "Anonymous"}!`);
+            if (account.isAnonymous) {
+                $("button#upgrade-anonymous-account-button").removeClass("is-hidden");
+            } else {
+                $("button#logout-button").removeClass("is-hidden");
+            }
+        });
+
+        $("button#upgrade-anonymous-account-button").click(() => {
+            document.location.href = `${document.location.origin}/account/sign-in.html?mode=upgrade&destination=${document.location.href}`;
+        });
+
+        $("button#logout-button").click(() => {
+            firebase.auth().signOut();
+        });
+
+        $("button#delete-account-button").click(() => {
+            this.blur();
+            $("div#delete-confirmation-modal").modal({
+                showClose: false
+            });
+        });
+        $("button#confirm-delete-account").click(() => {
+            if (account.isAnonymous) {
+                firebase.auth().currentUser.delete();
+            } else {
+                document.location.href = `${document.location.origin}/account/sign-in.html?mode=delete`;
+            }
+            $.modal.close();
+        });
+    </script>
+</body>
+
+</html>

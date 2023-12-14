@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+</head>
+
+<body>
+    <canvas id="canvas" width=720 height="360"></canvas>
+
+    <script>
+        let socket = new WebSocket(
+            `ws://127.0.0.1:8080/connect/tetro/0`,
+            "protocolOne",
+        );
+
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+        socket.onmessage = msg => {
+            msg.data.arrayBuffer().then(buffer => {
+                const data = new DataView(buffer);
+
+                const [width, height] = [data.getUint32(0, true), data.getUint32(4, true)];
+                const tile = (canvas.height - 40) / height;
+                const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
+
+                context.fillStyle = "black";
+                context.rect(0, 0, canvas.width, canvas.height);
+                context.fill();
+
+                context.strokeStyle = "blue";
+                context.strokeWidth = 3;
+                context.beginPath();
+                context.rect(offset[0], offset[1], width * tile, height * tile);
+                context.stroke();
+
+                context.strokeWidth = 1;
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const color = data.getUint32((x + y * width) * 4 + 8, true);
+                        context.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+                        context.beginPath();
+                        context.rect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
+                        context.stroke();
+                        context.beginPath();
+                        context.rect(offset[0] + x * tile, offset[1] + y * tile, tile - 1, tile - 1);
+                        context.fill();
+                    }
+                }
+            });
+        };
+
+        let holds = {};
+        const mapEvent = key => {
+            if (key == "q") {
+                return "CCW1";
+            } else if (key == "e") {
+                return "CW1";
+            } else if (key == "a") {
+                return "L1";
+            } else if (key == "d") {
+                return "R1";
+            } else if (key == "w") {
+                return "E1";
+            } else if (key == "u") {
+                return "CCW2";
+            } else if (key == "o") {
+                return "CW2";
+            } else if (key == "j") {
+                return "L2";
+            } else if (key == "l") {
+                return "R2";
+            } else if (key == "i") {
+                return "E2";
+            }
+        }
+
+        const opposite = event => {
+            if (event.substring(0, event.length() - 1) == "CW") {
+                return "CCW" + event.substring(event.length() - 1);
+            } else if (event.substring(0, event.length() - 1) == "CCW") {
+                return "CW" + event.substring(event.length() - 1);
+            } else if (event.substring(0, event.length() - 1) == "L") {
+                return "R" + event.substring(event.length() - 1);
+            } else if (event.substring(0, event.length() - 1) == "R") {
+                return "L" + event.substring(event.length() - 1);
+            }
+        }
+
+        window.onkeydown = e => {
+            let event = mapEvent(e.key);
+
+            if (event) {
+                socket.send(event);
+                if (holds[event]) {
+                    clearTimeout(holds[event].timeout);
+                    clearInterval(holds[event].interval);
+                }
+                // if (holds[opposite(event)]) {
+                //     clearTimeout(holds[opposite(event)].timeout);
+                //     clearInterval(holds[opposite(event)].interval);
+                // }
+                holds[event] = { timeout: null, interval: null };
+                holds[event].timeout = setTimeout(() => holds[event].interval = setInterval(() => socket.send(event), 50), 100);
+            } else if (e.key == "s") {
+                socket.send("SPEED1");
+            } else if (e.key == "k") {
+                socket.send("SPEED2");
+            }
+        }
+
+        window.onkeyup = e => {
+            let event = mapEvent(e.key);
+
+            if (event && holds[event]) {
+                clearTimeout(holds[event].timeout);
+                clearInterval(holds[event].interval);
+            } else if (e.key == "s") {
+                socket.send("SLOW1");
+            } else if (e.key == "k") {
+                socket.send("SLOW2");
+            }
+        }
+    </script>
+</body>
+
+</html>

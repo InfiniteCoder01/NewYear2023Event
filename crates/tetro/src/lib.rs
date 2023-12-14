@@ -1,11 +1,15 @@
-use hhmmss::Hhmmss;
-use scheduler::*;
-use warp::filters::ws::Message;
+pub mod game;
+pub mod tetromino;
 
-static mut STREAM_START: Option<std::time::Instant> = None;
-static mut FRAME_INDEX: usize = 0;
-static mut LAST_FRAME: Option<std::time::Instant> = None;
-static mut FRAME_TIMES: [u128; 30] = [0u128; 30];
+use crate::game::Game;
+use batbox_la::*;
+use scheduler::*;
+
+static STATE: std::sync::Mutex<Option<State>> = std::sync::Mutex::new(None);
+
+pub struct State {
+    games: Option<(Game, Game)>,
+}
 
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
@@ -13,27 +17,99 @@ pub extern "C" fn load(args: &str) {
     init_logger();
     log::info!("Got args: {args:?}");
     restart_async_server(async {
-        let routes = make_dev_server("tetro", &|_uid, mut websocket| async move {
+        let routes = make_dev_server("tetro", &|_uid, websocket| async move {
             use futures_util::stream::StreamExt;
             use futures_util::SinkExt;
+            use warp::filters::ws::Message;
 
-            while let Some(message) = websocket.next().await {
-                dbg!(message).ok();
-                websocket
-                    .send(Message::text("Hello, World!"))
-                    .await
-                    .unwrap();
-            }
+            let (mut tx, mut rx) = websocket.split();
+            tokio::spawn(async move {
+                loop {
+                    let message = {
+                        let state = STATE.lock().unwrap();
+                        let state = state.as_ref().unwrap();
+
+                        if let Some((game, _)) = &state.games {
+                            let mut message =
+                                vec![game.board.size.x as u32, game.board.size.y as _];
+                            message.reserve(game.board.field.len());
+                            for tile in game.board.field.iter() {
+                                message.push(tile.map_or(0, |color| {
+                                    ((color.0 * 255.0) as u32) << 16
+                                        | ((color.1 * 255.0) as u32) << 8
+                                        | ((color.2 * 255.0) as u32)
+                                }));
+                            }
+
+                            // message.push();
+
+                            Some(message)
+                        } else {
+                            None
+                        }
+                    };
+
+                    if let Some(message) = message {
+                        let message = message
+                            .iter()
+                            .flat_map(|x| x.to_le_bytes())
+                            .collect::<Vec<_>>();
+                        if let Err(err) = tx.send(Message::binary(message)).await {
+                            log::error!("Error sending board state: {err}")
+                        }
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                }
+            });
+            tokio::spawn(async move {
+                while let Some(message) = rx.next().await {
+                    match message {
+                        Ok(message) => {
+                            if let Ok(command) = message.to_str() {
+                                let mut state = STATE.lock().unwrap();
+                                let state = state.as_mut().unwrap();
+                                if let Some((game1, game2)) = &mut state.games {
+                                    // match command {
+                                    //     "CW" => state.game.try_turn(false),
+                                    //     "L" => state.game.try_move(-1),
+                                    //     "D" => true,
+                                    //     "R" => state.game.try_move(1),
+                                    //     "CCW" => state.game.try_turn(true),
+                                    //     _ => false,
+                                    // };
+                                    let game = if command.ends_with('1') { game1 } else { game2 };
+                                    match &command[..command.len() - 1] {
+                                        "CW" => game.try_turn(false),
+                                        "L" => game.try_move(-1),
+                                        "SPEED" => {
+                                            game.speedup(true);
+                                            true
+                                        }
+                                        "SLOW" => {
+                                            game.speedup(false);
+                                            true
+                                        }
+                                        "E" => {
+                                            game.effect = std::time::Instant::now();
+                                            true
+                                        }
+                                        "R" => game.try_move(1),
+                                        "CCW" => game.try_turn(true),
+                                        _ => false,
+                                    };
+                                }
+                            }
+                        }
+                        Err(err) => log::error!("Error recieving message: {err}"),
+                    }
+                }
+            });
         });
         routes
     });
 
-    unsafe {
-        STREAM_START = Some(std::time::Instant::now());
-        FRAME_INDEX = 0;
-        LAST_FRAME = Some(std::time::Instant::now());
-        FRAME_TIMES = [0u128; 30];
-    }
+    let mut state = STATE.lock().unwrap();
+    *state = Some(State { games: None });
 }
 
 #[no_mangle]
@@ -42,57 +118,41 @@ pub extern "C" fn frame(
     context: cairo::Context,
     width: f64,
     height: f64,
-    time_left: Duration,
+    _time_left: Duration,
 ) -> bool {
-    unsafe {
-        let frame_time = LAST_FRAME.unwrap().elapsed();
-        LAST_FRAME = Some(std::time::Instant::now());
-        FRAME_TIMES[FRAME_INDEX % FRAME_TIMES.len()] = frame_time.as_micros();
-        let frame_time = FRAME_TIMES.iter().copied().sum::<u128>() as usize / FRAME_TIMES.len();
-        let uptime = STREAM_START.unwrap().elapsed();
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
 
-        context.set_source_rgb(1.0, 1.0, 1.0);
-        context.select_font_face(
-            "Purisa",
-            cairo::FontSlant::Normal,
-            cairo::FontWeight::Normal,
-        );
-        context.set_font_size(20.0);
-        context.move_to(20.0, 30.0);
-        context.show_text(&format!("Frame {FRAME_INDEX}")).unwrap();
-        context.move_to(20.0, 50.0);
-        context
-            .show_text(&format!("Uptime: {}", uptime.hhmmssxxx()))
-            .unwrap();
-        context.move_to(20.0, 70.0);
-        context
-            .show_text(&format!("Frame time is {}ms", frame_time / 1000))
-            .unwrap();
-        context.move_to(20.0, 90.0);
-        context
-            .show_text(&format!(
-                "Framerate: {:.2}",
-                1_000_000.0 / frame_time as f32,
-            ))
-            .unwrap();
-        context.move_to(20.0, 110.0);
-        context
-            .show_text(&format!(
-                "Time left by the scheduler: {}",
-                time_left.hhmmssxxx(),
-            ))
-            .unwrap();
-
-        context.set_source_rgb(0.0, 0.0, 1.0);
-        context.rectangle(
-            width / 2.0 + uptime.as_secs_f64().sin() * 100.0 - 50.0,
-            height / 2.0 - 50.0,
-            100.0,
-            100.0,
-        );
-        context.fill().unwrap();
-
-        FRAME_INDEX += 1;
+    if state.games.is_none() {
+        state.games = Some((Game::new(vec2(10, 20)), Game::new(vec2(10, 20))));
     }
+
+    if let Some((game1, game2)) = &mut state.games {
+        let tile = height / game1.board.size.1.max(game2.board.size.1) as f64;
+        let board1_size = game1.board.size.map(|x| x as f64) * tile;
+        let board2_size = game2.board.size.map(|x| x as f64) * tile;
+        let padding = (width - (board1_size.x + board2_size.y)) / 3.0;
+
+        let mut lost = !game1.frame(
+            &context,
+            tile,
+            vec2(padding, (height - board1_size.1) / 2.0),
+            Some(game2),
+        );
+        game2.tetromino.ai(&mut game2.board);
+        lost |= !game2.frame(
+            &context,
+            tile,
+            vec2(
+                board1_size.x + padding * 2.0,
+                (height - board2_size.1) / 2.0,
+            ),
+            Some(game1),
+        );
+        if lost {
+            state.games = None;
+        }
+    }
+
     true
 }

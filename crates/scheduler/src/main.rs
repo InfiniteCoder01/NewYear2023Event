@@ -136,6 +136,6 @@ fn main() {
                 }
             }
         },
-        false,
+        true,
     );
 }

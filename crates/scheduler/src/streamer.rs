@@ -179,8 +179,8 @@ pub fn stream<F>(
         match msg.view() {
             MessageView::Eos(..) => break,
             MessageView::Error(err) => {
-                panic!(
-                    "Element {}:\n{}",
+                log::error!(
+                    "Element {}: {}",
                     err.src().map_or(String::from("None"), |element| element
                         .name()
                         .as_str()
@@ -189,8 +189,8 @@ pub fn stream<F>(
                 );
             }
             MessageView::Warning(warning) => {
-                eprintln!(
-                    "Warning from element {}:\n{}",
+                log::warn!(
+                    "Element {}: {}",
                     warning.src().map_or(String::from("None"), |element| element
                         .name()
                         .as_str()
@@ -199,8 +199,8 @@ pub fn stream<F>(
                 );
             }
             MessageView::Info(info) => {
-                eprintln!(
-                    "Info from element {}:\n{}",
+                log::info!(
+                    "Element {}: {}",
                     info.src().map_or(String::from("None"), |element| element
                         .name()
                         .as_str()

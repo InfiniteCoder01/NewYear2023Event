@@ -9,15 +9,28 @@
 <body>
     <!-- !NAV -->
 
+    <div class="buttons">
+        <button class="button" id="ccw"> <span class="icon"><i class="fa fa-turn-counterclockwise"></i></span></button>
+        <button class="button" id="left"> <span class="icon"><i class="fa fa-arrow-left"></i></span></button>
+        <button class="button" id="down"> <span class="icon"><i class="fa fa-arrow-down"></i></span></button>
+        <button class="button" id="right"> <span class="icon"><i class="fa fa-arrow-right"></i></span></button>
+        <button class="button" id="cw"> <span class="icon"><i class="fa fa-turn-clockwise"></i></span></button>
+    </div>
+
     <script>
         let socket;
+        $("button#cw").click(() => socket.send("CW"));
+        $("button#left").click(() => socket.send("L"));
+        $("button#down").click(() => socket.send("D"));
+        $("button#right").click(() => socket.send("R"));
+        $("button#ccw").click(() => socket.send("CCW"));
+
         requireAuth(() => {
             socket = new WebSocket(
                 `ws://${document.location.host}/connect/tetro/${account.uid}`,
                 "protocolOne",
             );
             socket.onmessage = message => console.log(message.data);
-            socket.send("Test");
         });
     </script>
 </body>

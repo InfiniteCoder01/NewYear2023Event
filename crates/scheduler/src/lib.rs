@@ -111,6 +111,6 @@ pub fn restart_async_server<F>(
             )
         }));
 
-        warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+        warp::serve(routes).run(([127, 0, 0, 1], 1480)).await;
     });
 }

@@ -8,30 +8,170 @@
 
 <body>
     <!-- !NAV -->
-
-    <div class="buttons">
-        <button class="button" id="ccw"> <span class="icon"><i class="fa fa-turn-counterclockwise"></i></span></button>
-        <button class="button" id="left"> <span class="icon"><i class="fa fa-arrow-left"></i></span></button>
-        <button class="button" id="down"> <span class="icon"><i class="fa fa-arrow-down"></i></span></button>
-        <button class="button" id="right"> <span class="icon"><i class="fa fa-arrow-right"></i></span></button>
-        <button class="button" id="cw"> <span class="icon"><i class="fa fa-turn-clockwise"></i></span></button>
+    <div id="container" style="position: absolute; left: 10px; right: 10px; top: 52px; bottom: 40px;">
+        <canvas id="display"></canvas>
     </div>
+    <p class="info" style="position: absolute; left: 10px; bottom: 10px;">AD - Move, QE - Turn, D - Fast Fall/Drop, W -
+        Zone</p>
 
-    <script>
+    <script type="module">
+        import processMessage from "/controller/api.js";
+
         let socket;
-        $("button#cw").click(() => socket.send("CW"));
-        $("button#left").click(() => socket.send("L"));
-        $("button#down").click(() => socket.send("D"));
-        $("button#right").click(() => socket.send("R"));
-        $("button#ccw").click(() => socket.send("CCW"));
 
         requireAuth(() => {
             socket = new WebSocket(
                 `ws://${document.location.host}/connect/tetro/${account.uid}`,
                 "protocolOne",
             );
-            socket.onmessage = message => console.log(message.data);
+            socket.onmessage = msg => {
+                processMessage(msg, state => {
+                    const container = $("#container");
+                    const canvas = $("canvas#display")[0];
+                    canvas.width = container.width();
+                    canvas.height = container.height();
+                    const context = canvas.getContext("2d");
+
+                    const [width, height] = [state.width, state.height]
+
+                    const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
+                    const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
+
+                    context.fillStyle = "black";
+                    context.rect(0, 0, canvas.width, canvas.height);
+                    context.fill();
+
+                    context.strokeStyle = "#000580";
+                    context.lineWidth = 5;
+                    context.beginPath();
+                    context.rect(offset[0], offset[1], width * tile, height * tile);
+                    context.stroke();
+
+                    context.lineWidth = 1;
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            context.fillStyle = `#${state.field[y][x].toString(16).padStart(6, "0")}`;
+                            context.beginPath();
+                            context.rect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
+                            context.stroke();
+                            context.beginPath();
+                            context.rect(offset[0] + x * tile, offset[1] + y * tile, tile - 1, tile - 1);
+                            context.fill();
+                        }
+                    }
+
+                    context.fillStyle = `#ffffff`;
+                    for (let zoneLine of state.zoneLines) {
+                        context.beginPath();
+                        context.rect(offset[0], offset[1] + zoneLine * tile, width * tile, tile);
+                        context.fill();
+                    }
+
+                    let tetromino = state.tetromino;
+                    context.fillStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
+                    for (let block of tetromino.blocks) {
+                        const [x, y] = [block[0] + tetromino.x, block[1] + tetromino.y];
+                        context.beginPath();
+                        context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 5, tile - 5);
+                        context.fill();
+                    }
+
+                    while (true) {
+                        tetromino.y++;
+                        let collides = false;
+                        for (let block of tetromino.blocks) {
+                            if (block[1] + tetromino.y >= height || state.field[block[1] + tetromino.y][block[0] + tetromino.x] != 0) {
+                                collides = true;
+                                break;
+                            }
+                        }
+                        if (collides) {
+                            tetromino.y--;
+                            break;
+                        }
+                    }
+
+                    context.strokeStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
+                    for (let block of tetromino.blocks) {
+                        const [x, y] = [block[0] + tetromino.x, block[1] + tetromino.y];
+                        context.beginPath();
+                        context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 4, tile - 4);
+                        context.stroke();
+                    }
+
+                    const zonePos = [offset[0] - tile * 2.1, offset[1] + tile * 1.2];
+                    context.strokeStyle = "#0020ff";
+                    context.lineWidth = 1;
+                    context.beginPath();
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile + 3.5,
+                        0.0,
+                        Math.PI * 2.0,
+                    );
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile - 3.5,
+                        0.0,
+                        Math.PI * 2.0,
+                    );
+                    context.stroke();
+
+                    context.lineWidth = 5;
+                    context.beginPath();
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile,
+                        -Math.PI / 2.0,
+                        state.zoneMeter / state.zoneMax * Math.PI * 2.0 - Math.PI / 2.0,
+                    );
+                    context.stroke();
+                });
+            };
         });
+
+        const keymap = {
+            "q": "CCW",
+            "e": "CW",
+            "a": "Left",
+            "d": "Right",
+            "w": "Zone",
+        };
+        let key_hold = {};
+        let key_state = {};
+
+        $(window).keydown(e => {
+            let event = keymap[e.key];
+
+            if (event) {
+                socket.send(event);
+                if (key_hold[event] !== undefined) clearTimeout(key_hold[event]);
+                key_hold[event] = setTimeout(() => key_state[event] = true, 100);
+            } else if (e.key == "s") {
+                socket.send("FastFall");
+            }
+        });
+
+        $(window).keyup(e => {
+            let event = keymap[e.key];
+
+            if (event) {
+                if (key_hold[event] !== undefined) clearTimeout(key_hold[event]);
+                key_state[event] = false;
+            } else if (e.key == "s") {
+                socket.send("SlowFall");
+            }
+        });
+
+        setInterval(() => {
+            for (const [event, state] of Object.entries(key_state)) {
+                if (state) socket.send(event);
+            }
+        }, 50);
+
     </script>
 </body>
 

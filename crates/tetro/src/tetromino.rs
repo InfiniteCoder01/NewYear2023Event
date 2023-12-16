@@ -1,6 +1,7 @@
 use super::game::*;
 use batbox_la::*;
 use rand::Rng;
+use scheduler::*;
 
 #[derive(Clone, Debug)]
 pub struct Tetromino {
@@ -88,7 +89,7 @@ impl Tetromino {
 
     pub fn turn(&mut self, ccw: bool) {
         for block in &mut self.blocks {
-            let last = block.clone();
+            let last = *block;
             if ccw {
                 block.x = last.y;
                 block.y = self.size - last.x - 1;
@@ -102,7 +103,7 @@ impl Tetromino {
     pub fn try_turn(&mut self, board: &Board, ccw: bool) -> bool {
         let mut attempt = self.clone();
         attempt.turn(ccw);
-        if attempt.fit(board) {
+        if attempt.fits(board) {
             *self = attempt;
             true
         } else {
@@ -112,7 +113,7 @@ impl Tetromino {
 
     pub fn try_move(&mut self, board: &Board, direction: vec2<i8>) -> bool {
         self.pos += direction.map(i32::from);
-        if !self.fit(board) {
+        if !self.fits(board) {
             self.pos -= direction.map(i32::from);
             false
         } else {
@@ -121,7 +122,7 @@ impl Tetromino {
     }
 
     pub fn drop(&mut self, board: &Board) {
-        while self.try_move(board, vec2::UNIT_Y) {}
+        while self.try_move(board, vec2(0, 1)) {}
     }
 
     pub fn place(&self, board: &mut Board) {
@@ -132,9 +133,13 @@ impl Tetromino {
         }
     }
 
-    pub fn fit(&self, board: &Board) -> bool {
+    pub fn fits(&self, board: &Board) -> bool {
         for block in self.blocks() {
-            if !Aabb2::from_corners(vec2::ZERO, board.size.map(|x| x as _)).contains(block)
+            if !Aabb2::from_corners(
+                vec2::ZERO,
+                board.size.map(|x| x as _) - vec2(0, board.zone_lines.len() as _),
+            )
+            .contains(block)
                 || board.get(block.map(|x| x as _)).is_some()
             {
                 return false;
@@ -151,31 +156,62 @@ impl Tetromino {
 }
 
 impl Tetromino {
-    pub fn ai(&mut self, board: &mut Board) {
-        let pos = self.pos.clone();
-        let mut best = (self.pos.x, 0, 0.0);
+    /// I did a lot of tetris AIs. But this one I did by following this article: https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+    pub fn ai(&mut self, board: &mut Board) -> bool {
+        let pos = self.pos;
+        let mut best = (self.pos.x, 0, usize::MAX, f64::MIN);
         let mut test = |tetromino: &mut Self, board: &mut Board, rotation| {
-            if !tetromino.fit(board) {
+            if !tetromino.fits(board) {
                 return;
             }
             tetromino.drop(board);
             tetromino.place(board);
 
-            let mut score = 0.0;
-            score += tetromino.blocks().map(|block| block.y as f32).sum::<f32>() * 0.5;
-            score += tetromino.blocks().map(|block| block.y).max().unwrap_or(0) as f32;
-            score += board.full_lines().count() as f32 * 3.0;
-            score -= tetromino
-                .blocks()
-                .filter(|block| {
-                    board
-                        .get(block.map(|x| x as usize) + vec2::UNIT_Y)
-                        .is_none()
-                })
-                .count() as f32;
+            let complete_lines = board.full_lines().count();
+            let (aggregate_height, max_height, bumpines) = {
+                let mut aggregate_height = 0;
+                let mut max_height = 0;
+                let mut bumpines = 0;
+                let mut last_height = None;
+                for x in 0..board.size.x {
+                    let mut height = 0;
+                    for y in 0..board.size.y {
+                        if board.get(vec2(x, y)).is_some()
+                            || y >= board.size.y - board.zone_lines.len()
+                        {
+                            height = board.size.y - y;
+                            break;
+                        }
+                    }
+                    aggregate_height += height - complete_lines;
+                    max_height = max_height.max(height);
+                    if let Some(last_height) = last_height {
+                        bumpines += height.abs_diff(last_height);
+                    }
+                    last_height = Some(height);
+                }
+                (aggregate_height, max_height, bumpines)
+            };
 
-            if score > best.2 {
-                best = (tetromino.pos.x, rotation, score);
+            let holes = {
+                let mut holes = 0;
+                for y in 1..board.size.y - board.zone_lines.len() {
+                    for x in 0..board.size.x {
+                        if board.get(vec2(x, y)).is_none() && board.get(vec2(x, y - 1)).is_some() {
+                            holes += 1;
+                        }
+                    }
+                }
+                holes
+            };
+
+            let score = aggregate_height as f64 * -0.510066
+                + complete_lines as f64 * 0.760666
+                + holes as f64 * -0.35663
+                + bumpines as f64 * -0.184483;
+
+            if score > best.3 {
+                best = (tetromino.pos.x, rotation, max_height, score);
             }
 
             for block in tetromino.blocks() {
@@ -186,30 +222,29 @@ impl Tetromino {
 
         for rotation in 0..4 {
             test(self, board, rotation);
-            self.try_turn(board, false);
-        }
-        while self.try_move(board, vec2(-1, 0)) {
-            for rotation in 0..4 {
+            while self.try_move(board, vec2(-1, 0)) {
                 test(self, board, rotation);
-                self.turn(false);
+            }
+            self.pos.x = pos.x;
+            while self.try_move(board, vec2(1, 0)) {
+                test(self, board, rotation);
+            }
+            self.pos.x = pos.x;
+            if !self.try_turn(board, false) {
+                for _ in 0..rotation {
+                    self.turn(true);
+                }
+                break;
             }
         }
-        self.pos.x = pos.x;
-        while self.try_move(board, vec2(1, 0)) {
-            for rotation in 0..4 {
-                test(self, board, rotation);
-                self.turn(false);
-            }
-        }
-        self.pos = pos;
 
-        if best.0 != self.pos.x {
-            self.try_move(board, vec2((best.0 - self.pos.x).signum() as _, 0));
-        } else if best.1 > 0 {
+        if best.1 > 0 {
             self.try_turn(board, best.1 > 2);
+        } else if best.0 != self.pos.x {
+            self.try_move(board, vec2((best.0 - self.pos.x).signum() as _, 0));
         } else {
-            // self.drop(board);
-            // self.place(board);
+            return best.2 < board.size.y - 3;
         }
+        false
     }
 }

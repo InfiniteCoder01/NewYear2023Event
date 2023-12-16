@@ -78,7 +78,7 @@ const changeLanguage = (language) => {
 
 createSelector("theme-selector", themes, theme => changeTheme(editor, theme), "Monokai");
 createSelector("keybinds-selector", keybindSchemes, changeKeybinds, "VSCode");
-createSelector("language-selector", languages, changeLanguage, "JavaScript");
+createSelector("language-selector", languages, changeLanguage, "Python");
 
 // Font size
 const setFontSize = (size) => {

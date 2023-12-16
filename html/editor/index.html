@@ -18,12 +18,18 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link href="/editor/editor.css" rel="stylesheet">
 
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.0/brython.min.js">
+  </script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.0/brython_stdlib.js">
+  </script>
+  <!-- <script src="https://cdn.jsdelivr.net/gh/pythonpad/brython-runner/lib/brython-runner.bundle.js"></script> -->
+
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
   <script src="/account/auth.js"></script>
 </head>
 
-<body>
+<body onload="brython()">
   <div id="panel" class="styled-container panel">
     <button id="run-button" class="styled-item panel-item icon-button"><i class="fa fa-play"></i></button>
     <select id="language-selector" class="styled-item panel-item"></select>
@@ -47,6 +53,23 @@
     <input type="number" id="font-size-input" class="styled-item modal-item" />
     <a href="#" rel="modal:close" class="styled-item modal-item abutton">Close</a>
   </div>
+
+  <script type="text/python">
+    from browser import window
+    import traceback
+
+    def run_python(code):
+        try:
+            exec(code)
+        except Exception:
+            error_message = traceback.format_exc()
+            window.error(error_message)
+
+    window.run_python = run_python
+
+    print = window.print
+    registerClient = window.registerClient
+  </script>
 
   <script type="module" src="editor/editor.js"></script>
 </body>

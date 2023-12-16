@@ -34,6 +34,7 @@ pub fn init_logger() {
     .unwrap();
 }
 
+// * ------------------------------------ Server ------------------------------------ * //
 pub fn make_dev_server<'a, U, F>(
     name: &'a str,
     socket: &'static F,
@@ -47,14 +48,7 @@ where
 
     let routes = warp::path::end().map(|| "TODO".to_owned());
     let routes = routes.or(warp::path("account").and(warp::fs::dir("./html/account/")));
-    let routes = routes.or({
-        let editor = warp::path("editor");
-        let editor_page = editor.and(warp::fs::dir("./html/editor/"));
-        let editor_pkg = editor
-            .and(warp::path("pkg"))
-            .and(warp::fs::dir("./crates/web-editor/pkg/"));
-        editor_page.or(editor_pkg)
-    });
+    let routes = routes.or(warp::path("editor").and(warp::fs::dir("./html/editor/")));
 
     let routes = routes.or(warp::path("controller").and(
         warp::path::end()
@@ -79,13 +73,11 @@ where
             .or(warp::fs::dir(format!("./html/controller/{name}/"))),
     ));
 
-    let routes = routes.or(warp::path("connect")
+    routes.or(warp::path("connect")
         .and(warp::path(name))
         .and(warp::path::param::<String>())
         .and(warp::ws())
-        .map(|uid, ws: warp::ws::Ws| ws.on_upgrade(|ws| socket(uid, ws))));
-
-    routes
+        .map(|uid, ws: warp::ws::Ws| ws.on_upgrade(|ws| socket(uid, ws))))
 }
 
 pub fn restart_async_server<F>(
@@ -113,4 +105,11 @@ pub fn restart_async_server<F>(
 
         warp::serve(routes).run(([127, 0, 0, 1], 1480)).await;
     });
+}
+
+// * ----------------------------------- Rendering ---------------------------------- * //
+pub type Color = (f64, f64, f64);
+
+pub fn color_to_u32(color: Color) -> u32 {
+    ((color.0 * 255.0) as u32) << 16 | ((color.1 * 255.0) as u32) << 8 | ((color.2 * 255.0) as u32)
 }

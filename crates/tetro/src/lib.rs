@@ -30,18 +30,35 @@ pub extern "C" fn load(args: &str) {
                         let state = state.as_ref().unwrap();
 
                         if let Some((game, _)) = &state.games {
-                            let mut message =
-                                vec![game.board.size.x as u32, game.board.size.y as _];
-                            message.reserve(game.board.field.len());
+                            let mut message = Vec::new();
+                            message.extend_from_slice(&(game.board.size.x as u32).to_le_bytes());
+                            message.extend_from_slice(&(game.board.size.y as u32).to_le_bytes());
                             for tile in game.board.field.iter() {
-                                message.push(tile.map_or(0, |color| {
-                                    ((color.0 * 255.0) as u32) << 16
-                                        | ((color.1 * 255.0) as u32) << 8
-                                        | ((color.2 * 255.0) as u32)
-                                }));
+                                message
+                                    .extend_from_slice(&tile.map_or(0, color_to_u32).to_le_bytes());
+                            }
+                            message.extend_from_slice(&game.zone_meter.to_le_bytes());
+                            message.extend_from_slice(&game.zone_max.to_le_bytes());
+                            message.extend_from_slice(
+                                &(game.board.zone_lines.len() as u32).to_le_bytes(),
+                            );
+                            for line in &game.board.zone_lines {
+                                message.extend_from_slice(&line.clone().move_by(0.0).to_le_bytes());
                             }
 
-                            // message.push();
+                            message.extend_from_slice(&game.tetromino.pos.x.to_le_bytes());
+                            message.extend_from_slice(&game.tetromino.pos.y.to_le_bytes());
+                            message.extend_from_slice(&(game.tetromino.size as u32).to_le_bytes());
+                            message.extend_from_slice(
+                                &color_to_u32(game.tetromino.color).to_le_bytes(),
+                            );
+                            message.extend_from_slice(
+                                &(game.tetromino.blocks.len() as u32).to_le_bytes(),
+                            );
+                            for block in &game.tetromino.blocks {
+                                message.push(block.x);
+                                message.push(block.y);
+                            }
 
                             Some(message)
                         } else {
@@ -50,58 +67,33 @@ pub extern "C" fn load(args: &str) {
                     };
 
                     if let Some(message) = message {
-                        let message = message
-                            .iter()
-                            .flat_map(|x| x.to_le_bytes())
-                            .collect::<Vec<_>>();
-                        if let Err(err) = tx.send(Message::binary(message)).await {
-                            log::error!("Error sending board state: {err}")
+                        if tx.send(Message::binary(message)).await.is_err() {
+                            break;
                         }
                     }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
                 }
             });
             tokio::spawn(async move {
-                while let Some(message) = rx.next().await {
-                    match message {
-                        Ok(message) => {
-                            if let Ok(command) = message.to_str() {
-                                let mut state = STATE.lock().unwrap();
-                                let state = state.as_mut().unwrap();
-                                if let Some((game1, game2)) = &mut state.games {
-                                    // match command {
-                                    //     "CW" => state.game.try_turn(false),
-                                    //     "L" => state.game.try_move(-1),
-                                    //     "D" => true,
-                                    //     "R" => state.game.try_move(1),
-                                    //     "CCW" => state.game.try_turn(true),
-                                    //     _ => false,
-                                    // };
-                                    let game = if command.ends_with('1') { game1 } else { game2 };
-                                    match &command[..command.len() - 1] {
-                                        "CW" => game.try_turn(false),
-                                        "L" => game.try_move(-1),
-                                        "SPEED" => {
-                                            game.speedup(true);
-                                            true
-                                        }
-                                        "SLOW" => {
-                                            game.speedup(false);
-                                            true
-                                        }
-                                        "E" => {
-                                            game.effect = std::time::Instant::now();
-                                            true
-                                        }
-                                        "R" => game.try_move(1),
-                                        "CCW" => game.try_turn(true),
-                                        _ => false,
-                                    };
-                                }
-                            }
+                while let Some(Ok(message)) = rx.next().await {
+                    if let Ok(command) = message.to_str() {
+                        let mut state = STATE.lock().unwrap();
+                        let state = state.as_mut().unwrap();
+                        if let Some((game, _)) = &mut state.games {
+                            match command {
+                                "CCW" => game.try_turn(true),
+                                "CW" => game.try_turn(false),
+                                "Left" => game.try_move(-1),
+                                "Right" => game.try_move(1),
+                                "Zone" => game.zone(),
+                                "FastFall" => game.speedup(true),
+                                "SlowFall" => game.speedup(false),
+                                _ => (),
+                            };
                         }
-                        Err(err) => log::error!("Error recieving message: {err}"),
                     }
+
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                 }
             });
         });
@@ -128,24 +120,42 @@ pub extern "C" fn frame(
     }
 
     if let Some((game1, game2)) = &mut state.games {
-        let tile = height / game1.board.size.1.max(game2.board.size.1) as f64;
-        let board1_size = game1.board.size.map(|x| x as f64) * tile;
-        let board2_size = game2.board.size.map(|x| x as f64) * tile;
+        let tile = (height / game1.board.size.y.max(game2.board.size.y) as f64)
+            .min(width / (game1.board.size.x.max(game2.board.size.x) + 3) as f64 / 2.0);
+
+        let board1_size = game1.board.size.map(|x| x as f64) * tile + vec2(tile * 3.0, 0.0);
+        let board2_size = game2.board.size.map(|x| x as f64) * tile + vec2(tile * 3.0, 0.0);
         let padding = (width - (board1_size.x + board2_size.y)) / 3.0;
 
+        // * AI 1
+        // if game1.tetromino.ai(&mut game1.board) {
+        //     game1.speedup(true);
+        // }
+        // if game1.zone_meter >= game1.zone_max * 0.4 {
+        //     game1.zone();
+        // }
+
+        // * AI 2
+        if game2.tetromino.ai(&mut game2.board) {
+            game2.speedup(true);
+        }
+        if game2.zone_meter >= game2.zone_max * 0.4 {
+            game2.zone();
+        }
+
+        // * Frames
         let mut lost = !game1.frame(
             &context,
             tile,
-            vec2(padding, (height - board1_size.1) / 2.0),
+            vec2(padding + tile * 3.0, (height - board1_size.y) / 2.0),
             Some(game2),
         );
-        game2.tetromino.ai(&mut game2.board);
         lost |= !game2.frame(
             &context,
             tile,
             vec2(
-                board1_size.x + padding * 2.0,
-                (height - board2_size.1) / 2.0,
+                board1_size.x + padding * 2.0 + tile * 3.0,
+                (height - board2_size.y) / 2.0,
             ),
             Some(game1),
         );

@@ -114,7 +114,7 @@ fn main() {
                         next.map_or(Duration::max_value(), |next| next.timestamp - Local::now()),
                     )
                 } {
-                    plugin = next.map(|next| LoadedPlugin::load(next));
+                    plugin = next.map(LoadedPlugin::load);
                 }
             } else {
                 context.set_source_rgb(1.0, 1.0, 1.0);

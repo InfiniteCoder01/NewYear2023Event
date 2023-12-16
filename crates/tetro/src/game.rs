@@ -3,13 +3,13 @@ use batbox_la::*;
 use bidivec::BidiVec;
 use rand::Rng;
 use std::time::{Duration, Instant};
-
-pub type Color = (f64, f64, f64);
+use tween::Tweener;
 
 #[derive(Clone, Debug)]
 pub struct Board {
     pub size: vec2<usize>,
     pub field: BidiVec<Option<(f64, f64, f64)>>,
+    pub zone_lines: Vec<Tweener<f64, f64, tween::CubicInOut>>,
 }
 
 impl Board {
@@ -17,6 +17,7 @@ impl Board {
         Self {
             size,
             field: BidiVec::with_elem(None, size.x, size.y),
+            zone_lines: Vec::new(),
         }
     }
 
@@ -36,35 +37,39 @@ impl Board {
         offset: isize,
         filler: impl Fn() -> Option<(f64, f64, f64)>,
     ) {
-        let origin = origin.unwrap_or(self.size.y - 1);
-        if offset < 0 {
-            for y in 0..=origin {
-                let target_y = y as isize + offset;
-                if target_y >= 0 {
-                    for x in 0..self.size.x {
-                        self.set(vec2(x, target_y as _), self.get(vec2(x, y)));
+        let origin = origin.unwrap_or(self.size.y - self.zone_lines.len() - 1);
+        match offset.cmp(&0) {
+            std::cmp::Ordering::Less => {
+                for y in 0..=origin {
+                    let target_y = y as isize + offset;
+                    if target_y >= 0 {
+                        for x in 0..self.size.x {
+                            self.set(vec2(x, target_y as _), self.get(vec2(x, y)));
+                        }
                     }
-                }
-                if y > (origin as isize + offset) as usize {
-                    for x in 0..self.size.x {
-                        self.set(vec2(x, y), filler());
-                    }
-                }
-            }
-        } else if offset > 0 {
-            for y in (0..=origin).rev() {
-                let target_y = y + offset as usize;
-                if target_y <= origin {
-                    for x in 0..self.size.x {
-                        self.set(vec2(x, target_y), self.get(vec2(x, y)));
-                    }
-                }
-                if y < offset as usize {
-                    for x in 0..self.size.x {
-                        self.set(vec2(x, y), filler());
+                    if y > (origin as isize + offset) as usize {
+                        for x in 0..self.size.x {
+                            self.set(vec2(x, y), filler());
+                        }
                     }
                 }
             }
+            std::cmp::Ordering::Greater => {
+                for y in (0..=origin).rev() {
+                    let target_y = y + offset as usize;
+                    if target_y <= origin {
+                        for x in 0..self.size.x {
+                            self.set(vec2(x, target_y), self.get(vec2(x, y)));
+                        }
+                    }
+                    if y < offset as usize {
+                        for x in 0..self.size.x {
+                            self.set(vec2(x, y), filler());
+                        }
+                    }
+                }
+            }
+            std::cmp::Ordering::Equal => (),
         }
     }
 
@@ -88,7 +93,13 @@ impl Board {
         })
     }
 
-    pub fn draw(&mut self, context: &cairo::Context, tile: f64, offset: vec2<f64>) {
+    pub fn draw(
+        &mut self,
+        context: &cairo::Context,
+        tile: f64,
+        offset: vec2<f64>,
+        frame_time: f64,
+    ) {
         context.set_source_rgb(0.0, 0.2, 1.0);
         context.set_line_width(4.0);
         context.rectangle(
@@ -127,7 +138,26 @@ impl Board {
                 }
             }
         }
+
+        context.set_source_rgb(1.0, 1.0, 1.0);
+        for y in &mut self.zone_lines {
+            context.rectangle(
+                offset.x,
+                offset.y + y.move_by(frame_time) * tile,
+                self.size.x as f64 * tile,
+                tile,
+            );
+            context.fill().unwrap();
+        }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum State {
+    #[default]
+    Normal,
+    Zone,
+    ZoneEnding,
 }
 
 #[derive(Clone, Debug)]
@@ -140,8 +170,11 @@ pub struct Game {
     pub move_time: Duration,
     pub general_move_time: Duration,
 
-    pub effect: Instant,
-    pub effect_time: Duration,
+    pub state: State,
+    pub zone_meter: f64,
+    pub zone_max: f64,
+
+    pub last_frame: Instant,
 }
 
 impl Game {
@@ -155,8 +188,11 @@ impl Game {
             move_time: Duration::from_millis(500),
             general_move_time: Duration::from_millis(500),
 
-            effect: Instant::now() - Duration::from_secs(60 * 60),
-            effect_time: Duration::from_secs(20),
+            state: State::Normal,
+            zone_meter: 0.0,
+            zone_max: 20.0,
+
+            last_frame: std::time::Instant::now(),
         }
     }
 
@@ -167,8 +203,10 @@ impl Game {
         offset: vec2<f64>,
         opponent: Option<&mut Game>,
     ) -> bool {
-        let effect = self.effect.elapsed() < self.effect_time;
-        if self.timer.elapsed() >= self.move_time && !effect {
+        let frame_time = self.last_frame.elapsed().as_secs_f64();
+        self.last_frame = std::time::Instant::now();
+
+        if self.timer.elapsed() >= self.move_time && self.state == State::Normal {
             self.timer = std::time::Instant::now();
             if !self.tetromino.try_move(&self.board, vec2(0, 1)) {
                 self.tetromino.place(&mut self.board);
@@ -178,7 +216,7 @@ impl Game {
         if self.placed {
             self.placed = false;
             self.tetromino = Tetromino::random(self.board.size.x / 2);
-            if !self.tetromino.fit(&self.board) {
+            if !self.tetromino.fits(&self.board) {
                 return false;
             }
         }
@@ -187,42 +225,106 @@ impl Game {
             let cleared_lines = self.board.full_lines().collect::<Vec<_>>();
             for &y in &cleared_lines {
                 self.board.shift(Some(y), 1, || None);
-                if effect {
-                    self.board.shift(None, -1, || Some((1.0, 1.0, 1.0)));
-                }
             }
 
-            if !effect {
-                if let Some(opponent) = opponent {
-                    opponent.board.garbage(cleared_lines.len() / 4);
-                    if cleared_lines.len() >= 8 {
-                        opponent.tetromino = opponent.tetromino.clone().scale(2);
-                    }
+            if self.state == State::Zone {
+                self.zone_meter -= frame_time;
+                if self.zone_meter <= 0.0 {
+                    self.zone_meter = 0.0;
+                    self.state = State::ZoneEnding;
                 }
+
+                self.board
+                    .shift(None, -(cleared_lines.len() as isize), || None);
+                for &line in cleared_lines.iter().rev() {
+                    self.board.zone_lines.push(Tweener::cubic_in_out(
+                        line as f64,
+                        (self.board.size.y - self.board.zone_lines.len() - 1) as f64,
+                        1.0,
+                    ));
+                }
+            } else if self.state == State::Normal {
+                self.zone_meter += cleared_lines.len() as f64 / 2.0;
+                self.zone_meter = self.zone_meter.min(self.zone_max);
             }
         }
 
-        // self.tetromino.ai(&mut self.board);
+        if self.state == State::ZoneEnding {
+            let mut zone_finished = true;
+            for line in &self.board.zone_lines {
+                if !line.is_finished() {
+                    zone_finished = false;
+                }
+            }
+            if zone_finished {
+                self.state = State::Normal;
+                if let Some(opponent) = opponent {
+                    opponent.board.garbage(self.board.zone_lines.len() / 4);
+                    // if self.board.zone_lines.len() >= 8 {
+                    //     opponent.tetromino = opponent.tetromino.clone().scale(2);
+                    // }
+                }
+                let zone_lines = self.board.zone_lines.len();
+                self.board.zone_lines.clear();
+                self.board.shift(None, zone_lines as _, || None);
+            }
+        }
 
-        self.board.draw(context, tile, offset);
-        self.tetromino.draw(&context, tile, offset);
+        self.board.draw(context, tile, offset, frame_time);
+        self.tetromino.draw(context, tile, offset);
         let mut shadow = self.tetromino.clone();
         shadow.drop(&self.board);
         shadow.draw_shadow(context, tile, offset);
+
+        let zone_pos = offset + vec2(-2.1, 1.2) * tile;
+        context.set_source_rgb(0.0, 0.2, 1.0);
+        context.set_line_width(1.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile + 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        context.stroke().unwrap();
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile - 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        context.stroke().unwrap();
+
+        context.set_line_width(5.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile,
+            -std::f64::consts::PI / 2.0,
+            self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
+                - std::f64::consts::PI / 2.0,
+        );
+        context.stroke().unwrap();
+
         true
     }
 
-    pub fn try_move(&mut self, direction: i8) -> bool {
-        self.tetromino.try_move(&self.board, vec2(direction, 0))
+    pub fn try_move(&mut self, direction: i8) {
+        self.tetromino.try_move(&self.board, vec2(direction, 0));
     }
 
-    pub fn try_turn(&mut self, ccw: bool) -> bool {
-        self.tetromino.try_turn(&self.board, ccw)
+    pub fn try_turn(&mut self, ccw: bool) {
+        self.tetromino.try_turn(&self.board, ccw);
+    }
+
+    pub fn zone(&mut self) {
+        self.state = State::Zone;
     }
 
     pub fn speedup(&mut self, speedup: bool) {
         if speedup {
-            if self.effect.elapsed() < self.effect_time {
+            if self.state == State::Zone {
                 self.tetromino.drop(&self.board);
                 self.tetromino.place(&mut self.board);
                 self.placed = true;

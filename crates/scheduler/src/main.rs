@@ -136,6 +136,6 @@ fn main() {
                 }
             }
         },
-        true,
+        std::env::args().collect::<Vec<_>>() != ["Pi"],
     );
 }

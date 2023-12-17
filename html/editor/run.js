@@ -7,6 +7,11 @@ window.error = (text) => {
     $('#console').append(`<pre style=\"color: red;\">${text}</pre>`)
 };
 
+let backgroundTasks = [];
+window.repeat = function (callback, interval) {
+    backgroundTasks.push(setInterval(callback, interval));
+};
+
 import processMessage from "/controller/api.js";
 
 let socket;
@@ -30,6 +35,11 @@ window.sendMessage = (message) => {
 setInterval(() => $('#console').scrollTop($('#console')[0].scrollHeight), 25);
 
 const run = (code, language) => {
+    for (let task of backgroundTasks) {
+        clearInterval(task);
+    }
+    backgroundTasks = [];
+
     if (language == "ace/mode/javascript") {
         // eval(prelude + code);
     } else if (language == "ace/mode/python") {

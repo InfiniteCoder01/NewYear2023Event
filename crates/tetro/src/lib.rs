@@ -67,7 +67,8 @@ pub extern "C" fn load(args: &str) {
                     };
 
                     if let Some(message) = message {
-                        if tx.send(Message::binary(message)).await.is_err() {
+                        if let Err(err) = tx.send(Message::binary(message)).await {
+                            log::debug!("Send error: {err}");
                             break;
                         }
                     }

@@ -18,8 +18,7 @@ let socket;
 window.registerClient = (callback) => {
     if (socket) socket.close();
     socket = new WebSocket(
-        `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/tetro/${account.uid}`,
-        "protocolOne",
+        `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/tetro/${account.uid}`
     );
 
     socket.onmessage = msg => {

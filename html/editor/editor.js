@@ -2,7 +2,7 @@ import themes from "./themes.js";
 import changeTheme from "./themeing.js";
 import run from "./run.js";
 
-requireAuth();
+requireAuth(() => loadCode());
 
 const createSelector = (id, data, callback, defaultValue) => {
     let selector = $(`select#${id}`);
@@ -14,7 +14,7 @@ const createSelector = (id, data, callback, defaultValue) => {
 };
 
 // Settings
-$('#settings-button').click(function (event) {
+$("#settings-button").click(function (event) {
     event.preventDefault();
     this.blur();
     $("#settings-modal").modal({
@@ -69,7 +69,7 @@ const keybindSchemes = {
 };
 
 const changeKeybinds = (scheme) => {
-    editor.setOption('keyboardHandler', keybindSchemes[scheme]);
+    editor.setOption("keyboardHandler", keybindSchemes[scheme]);
 };
 
 const changeLanguage = (language) => {
@@ -82,7 +82,7 @@ createSelector("language-selector", languages, changeLanguage, "Python");
 
 // Font size
 const setFontSize = (size) => {
-    editor.setOption('fontSize', size);
+    editor.setOption("fontSize", size);
 };
 
 let fontSizeInput = $(`input#font-size-input`);
@@ -91,12 +91,49 @@ fontSizeInput.val(14);
 setFontSize(14);
 
 // Console
-$('input#console-input').submit(line => {
+$("input#console-input").submit(line => {
     console.log(line);
 });
 
 // Run
-$('#run-button').click(function (event) {
-    event.preventDefault();
+$("button#run-button").click(() => {
     run(editor.getValue(), editor.session.getMode().$id);
 });
+
+// Save
+var db = firebase.firestore();
+
+$("button#save-button").click(saveCode);
+$(document).keydown(function (event) {
+    if (event.ctrlKey && event.key === 's') {
+        event.preventDefault();
+        saveCode();
+    }
+});
+
+function saveCode() {
+    db.collection("users").doc(`${account.uid}/code/${editor.session.getMode().$id.split('/').pop()}`).set({
+        text: editor.getValue(),
+    }).catch(function (error) {
+        window.error("Error saving code: ", error);
+    });
+}
+
+function loadCode() {
+    db.collection("users").doc(`${account.uid}/code/${editor.session.getMode().$id.split('/').pop()}`).get()
+        .then(function (doc) {
+            if (doc.exists) {
+                editor.setValue(doc.data().text);
+            } else {
+                const templates = {
+                    "ace/mode/python": "python.py",
+                }
+                fetch(`controller/template/${templates[editor.session.getMode().$id]}`)
+                    .then(response => response.text())
+                    .then(text => editor.setValue(text))
+                    .catch(() => window.error("Error loading template code"));
+            }
+        }).catch(function (error) {
+            window.error("Error loading code: ", error);
+        });
+}

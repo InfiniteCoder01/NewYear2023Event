@@ -1,0 +1,3 @@
+[ ] Implement WebSocket functionality to send data only when it is updated. @started(23-12-17 15:33)
+[ ] Enhance tetris boards to store account data and add a queue feature. (Enchance? AI written BTW.)
+[ ] Develop a scheduler CLI to allow reloading of plugins.

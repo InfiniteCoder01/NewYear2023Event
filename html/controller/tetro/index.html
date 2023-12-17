@@ -70,7 +70,7 @@
                     let tetromino = state.tetromino;
                     context.fillStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
                     for (let block of tetromino.blocks) {
-                        const [x, y] = [block[0] + tetromino.x, block[1] + tetromino.y];
+                        const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
                         context.beginPath();
                         context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 5, tile - 5);
                         context.fill();
@@ -80,7 +80,7 @@
                         tetromino.y++;
                         let collides = false;
                         for (let block of tetromino.blocks) {
-                            if (block[1] + tetromino.y >= height || state.field[block[1] + tetromino.y][block[0] + tetromino.x] != 0) {
+                            if (block.y + tetromino.y >= height || state.field[block.y + tetromino.y][block.x + tetromino.x] != 0) {
                                 collides = true;
                                 break;
                             }
@@ -93,7 +93,7 @@
 
                     context.strokeStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
                     for (let block of tetromino.blocks) {
-                        const [x, y] = [block[0] + tetromino.x, block[1] + tetromino.y];
+                        const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
                         context.beginPath();
                         context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 4, tile - 4);
                         context.stroke();

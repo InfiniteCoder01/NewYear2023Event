@@ -22,25 +22,27 @@
   </script>
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.0/brython_stdlib.js">
   </script>
-  <!-- <script src="https://cdn.jsdelivr.net/gh/pythonpad/brython-runner/lib/brython-runner.bundle.js"></script> -->
 
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
   <script src="/account/auth.js"></script>
 </head>
 
 <body onload="brython()">
   <div id="panel" class="styled-container panel">
     <button id="run-button" class="styled-item panel-item icon-button"><i class="fa fa-play"></i></button>
+    <button id="save-button" class="styled-item panel-item icon-button"><i class="fa fa-save"></i></button>
     <select id="language-selector" class="styled-item panel-item"></select>
     <button id="settings-button" class="styled-item panel-item icon-button" style="float: right;"><i
         class="fa fa-gear"></i></button>
+    <button onclick="document.location.pathname='/account'" class="styled-item panel-item icon-button"
+      style="float: right;"><i class="fa fa-user"></i></button>
+    <button onclick="document.location.pathname='/controller'" class="styled-item panel-item icon-button"
+      style="float: right;"><i class="fa fa-gamepad"></i></button>
     <a href="https://ace.c9.io/" class="styled-item panel-item link" style="float: right;">Powered by Ace</a>
   </div>
-  <div id="editor">function foo(items) {
-    var x = "All this is syntax highlighted";
-    return x;
-    }</div>
+  <div id="editor">*LOADING*</div>
 
   <div id="console" class="styled-container">
   </div>
@@ -68,7 +70,9 @@
     window.run_python = run_python
 
     print = window.print
+    setInterval = window.setInterval
     registerClient = window.registerClient
+    sendMessage = window.sendMessage
   </script>
 
   <script type="module" src="editor/editor.js"></script>

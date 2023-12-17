@@ -7,6 +7,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <script src="/account/auth.js"></script>
 
     <script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
@@ -46,15 +47,9 @@
             $("#title").text("Sing in permanent account to upgrade");
             uiConfig.signInOptions.splice(uiConfig.signInOptions.length - 1, 1);
             uiConfig.callbacks.signInFailure = function (error) {
-                if (error.code != 'firebaseui/anonymous-upgrade-merge-conflict') {
-                    return Promise.resolve();
+                if (error.code == 'firebaseui/anonymous-upgrade-merge-conflict') {
+                    alert("Sorry, merging is too hard... You can copy all your code, delete account and sign in (but your points will be lost), or contact me somehow and I'll try to migrate you.");
                 }
-                var cred = error.credential;
-                // TODO: Merge the data
-                firebase.auth().currentUser.delete();
-                const result = firebase.auth().signInWithCredential(cred);
-                document.location.href = uiConfig.signInSuccessUrl;
-                return result;
             }
         }
 

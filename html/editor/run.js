@@ -20,7 +20,10 @@ window.registerClient = (callback) => {
     socket.onmessage = msg => {
         processMessage(msg, callback);
     };
+}
 
+window.sendMessage = (message) => {
+    socket.send(message);
 }
 
 // --------------------------------------- Run --------------------------------------- //

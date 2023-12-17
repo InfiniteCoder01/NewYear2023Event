@@ -11,7 +11,7 @@
     <div id="container" style="position: absolute; left: 10px; right: 10px; top: 52px; bottom: 40px;">
         <canvas id="display"></canvas>
     </div>
-    <p class="info" style="position: absolute; left: 10px; bottom: 10px;">AD - Move, QE - Turn, D - Fast Fall/Drop, W -
+    <p class="info" style="position: absolute; left: 10px; bottom: 10px;">AD/Arrows - Move, QE - Turn, D/Down Arrow - Fast Fall/Drop, W/Up Arrow -
         Zone</p>
 
     <script type="module">
@@ -138,6 +138,9 @@
             "a": "Left",
             "d": "Right",
             "w": "Zone",
+            "ArrowLeft": "Left",
+            "ArrowRight": "Right",
+            "ArrowUp": "Zone",
         };
         let key_hold = {};
         let key_state = {};
@@ -149,7 +152,7 @@
                 socket.send(event);
                 if (key_hold[event] !== undefined) clearTimeout(key_hold[event]);
                 key_hold[event] = setTimeout(() => key_state[event] = true, 100);
-            } else if (e.key == "s") {
+            } else if (e.key == "s" || e.key == "ArrowDown") {
                 socket.send("FastFall");
             }
         });
@@ -160,7 +163,7 @@
             if (event) {
                 if (key_hold[event] !== undefined) clearTimeout(key_hold[event]);
                 key_state[event] = false;
-            } else if (e.key == "s") {
+            } else if (e.key == "s" || e.key == "ArrowDown") {
                 socket.send("SlowFall");
             }
         });

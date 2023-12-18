@@ -93,10 +93,10 @@ fn main() {
 
     streamer::stream(
         // (1920, 1080),
-        (1280, 720),
-        // (854, 480),
+        // (1280, 720),
+        (854, 480),
         7000, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
-        64000,
+        128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {
             if schedule_timer.elapsed().as_secs_f32() > 0.5 {

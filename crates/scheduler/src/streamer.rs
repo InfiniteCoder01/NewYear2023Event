@@ -8,7 +8,6 @@ use gst::{prelude::*, Caps, ElementFactory};
 pub fn stream<F>(
     size: (usize, usize),
     video_bitrate: usize,
-    _audio_samplerate: usize,
     audio_bitrate: usize,
     rtmp_uri: &str,
     draw_frame: F,
@@ -70,7 +69,7 @@ pub fn stream<F>(
     let video_encoder = ElementFactory::make(enc)
         .property("key-int-max", 30_u32)
         .property("bitrate", video_bitrate as u32)
-        .property_from_str("speed-preset", "ultrafast")
+        .property_from_str("speed-preset", "veryfast")
         .build()
         .unwrap();
     let video_decoder = ElementFactory::make(parse).build().unwrap();

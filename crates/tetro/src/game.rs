@@ -166,6 +166,8 @@ pub struct Game {
     pub tetromino: Tetromino,
     pub placed: bool,
 
+    pub particles: Vec<Particle>,
+
     pub timer: Instant,
     pub move_time: Duration,
     pub general_move_time: Duration,
@@ -175,6 +177,31 @@ pub struct Game {
     pub zone_max: f64,
 
     pub last_frame: Instant,
+}
+
+#[derive(Clone, Debug)]
+pub struct Particle {
+    position: vec2<f64>,
+    velocity: vec2<f64>,
+    size: f64,
+}
+
+impl Particle {
+    pub fn new(position: vec2<f64>) -> Self {
+        let mut rng = rand::thread_rng();
+        Self {
+            position,
+            velocity: vec2(rng.gen_range(-20.0..20.0), rng.gen_range(-20.0..20.0)),
+            size: rng.gen_range(5.0..8.0),
+        }
+    }
+
+    pub fn frame(&mut self, context: &cairo::Context, offset: vec2<f64>, frame_time: f64) {
+        self.position += self.velocity * frame_time;
+        self.size -= 0.5 * frame_time;
+        let tl = offset + self.position - vec2::splat(self.size * 0.5);
+        context.rectangle(tl.x, tl.y, self.size, self.size)
+    }
 }
 
 impl Game {
@@ -187,6 +214,8 @@ impl Game {
             timer: Instant::now(),
             move_time: Duration::from_millis(500),
             general_move_time: Duration::from_millis(500),
+
+            particles: Vec::new(),
 
             state: State::Normal,
             zone_meter: 0.0,
@@ -225,6 +254,17 @@ impl Game {
             let cleared_lines = self.board.full_lines().collect::<Vec<_>>();
             for &y in &cleared_lines {
                 self.board.shift(Some(y), 1, || None);
+                if self.state == State::Normal {
+                    let mut rng = rand::thread_rng();
+                    let tl = vec2(0.0, y as f64 * tile);
+                    let br = tl + vec2(self.board.size.x as f64 * tile, tile);
+                    for _ in 0..100 {
+                        self.particles.push(Particle::new(vec2(
+                            rng.gen_range(tl.x..br.x),
+                            rng.gen_range(tl.y..br.y),
+                        )));
+                    }
+                }
             }
 
             if self.state == State::Zone {
@@ -275,6 +315,10 @@ impl Game {
         let mut shadow = self.tetromino.clone();
         shadow.drop(&self.board);
         shadow.draw_shadow(context, tile, offset);
+
+        for particle in &mut self.particles {
+            particle.frame(context, offset, frame_time);
+        }
 
         let zone_pos = offset + vec2(-2.1, 1.2) * tile;
         context.set_source_rgb(0.0, 0.2, 1.0);

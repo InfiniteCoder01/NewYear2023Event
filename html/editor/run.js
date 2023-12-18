@@ -1,10 +1,10 @@
 // --------------------------------------- APIs --------------------------------------- //
 window.print = (text) => {
-    $('#console').append(`<pre>${text}</pre>`)
+    $('#console').append(`<div>${text}</div>`)
 };
 
 window.error = (text) => {
-    $('#console').append(`<pre style=\"color: red;\">${text}</pre>`)
+    $('#console').append(`<div style=\"color: red;\">${text}</div>`)
 };
 
 let backgroundTasks = [];

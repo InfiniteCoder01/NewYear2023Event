@@ -182,8 +182,10 @@ pub struct Game {
 #[derive(Clone, Debug)]
 pub struct Particle {
     position: vec2<f64>,
-    velocity: vec2<f64>,
-    size: f64,
+    velocity: vec2<Tweener<f64, f64, tween::SineIn>>,
+    size: Tweener<f64, f64, tween::CubicIn>,
+    color_rg: Tweener<f64, f64, tween::CubicIn>,
+    angle: f64,
 }
 
 impl Particle {
@@ -191,16 +193,33 @@ impl Particle {
         let mut rng = rand::thread_rng();
         Self {
             position,
-            velocity: vec2(rng.gen_range(-20.0..20.0), rng.gen_range(-20.0..20.0)),
-            size: rng.gen_range(5.0..8.0),
+            velocity: vec2(
+                Tweener::sine_in(0.0, rng.gen_range(-20.0..20.0), 1.0),
+                Tweener::sine_in(0.0, rng.gen_range(-20.0..20.0), 1.0),
+            ),
+            size: Tweener::cubic_in(5.0, 0.0, 2.0),
+            color_rg: Tweener::cubic_in(1.0, 0.0, 2.0),
+            angle: 0.0,
         }
     }
 
     pub fn frame(&mut self, context: &cairo::Context, offset: vec2<f64>, frame_time: f64) {
-        self.position += self.velocity * frame_time;
-        self.size -= 0.5 * frame_time;
-        let tl = offset + self.position - vec2::splat(self.size * 0.5);
-        context.rectangle(tl.x, tl.y, self.size, self.size)
+        let velocity = vec2(
+            self.velocity.x.move_by(frame_time),
+            self.velocity.y.move_by(frame_time),
+        );
+        self.position += velocity * frame_time;
+        let rg = self.color_rg.move_by(frame_time);
+        let size = self.size.move_by(frame_time);
+        if !self.size.is_finished() {
+            let center = offset + self.position;
+            context.set_source_rgb(rg, rg, 1.0);
+            context.translate(center.x, center.y);
+            context.rotate(self.angle);
+            context.rectangle(-size * 0.5, -size * 0.5, size, size);
+            context.fill().unwrap();
+            context.identity_matrix();
+        }
     }
 }
 
@@ -222,6 +241,15 @@ impl Game {
             zone_max: 20.0,
 
             last_frame: std::time::Instant::now(),
+        }
+    }
+
+    fn particle_rect(&mut self, tl: vec2<f64>, size: vec2<f64>) {
+        for y in (0..=size.y as usize).step_by(5) {
+            for x in (0..=size.x as usize).step_by(5) {
+                self.particles
+                    .push(Particle::new(tl + vec2(x as _, y as _)));
+            }
         }
     }
 
@@ -255,15 +283,9 @@ impl Game {
             for &y in &cleared_lines {
                 self.board.shift(Some(y), 1, || None);
                 if self.state == State::Normal {
-                    let mut rng = rand::thread_rng();
                     let tl = vec2(0.0, y as f64 * tile);
-                    let br = tl + vec2(self.board.size.x as f64 * tile, tile);
-                    for _ in 0..100 {
-                        self.particles.push(Particle::new(vec2(
-                            rng.gen_range(tl.x..br.x),
-                            rng.gen_range(tl.y..br.y),
-                        )));
-                    }
+                    let size = vec2(self.board.size.x as f64 * tile, tile);
+                    self.particle_rect(tl, size);
                 }
             }
 
@@ -305,6 +327,17 @@ impl Game {
                     // }
                 }
                 let zone_lines = self.board.zone_lines.len();
+                {
+                    let tl = vec2(
+                        0.0,
+                        (self.board.size.y - self.board.zone_lines.len()) as f64 * tile,
+                    );
+                    let size = vec2(
+                        self.board.size.x as f64 * tile,
+                        self.board.zone_lines.len() as f64 * tile,
+                    );
+                    self.particle_rect(tl, size);
+                }
                 self.board.zone_lines.clear();
                 self.board.shift(None, zone_lines as _, || None);
             }
@@ -319,6 +352,8 @@ impl Game {
         for particle in &mut self.particles {
             particle.frame(context, offset, frame_time);
         }
+        self.particles
+            .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
 
         let zone_pos = offset + vec2(-2.1, 1.2) * tile;
         context.set_source_rgb(0.0, 0.2, 1.0);

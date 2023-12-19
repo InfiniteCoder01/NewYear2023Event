@@ -25,13 +25,14 @@ impl Plugin<'_> {
 }
 
 pub fn init_logger() {
-    simplelog::CombinedLogger::init(vec![simplelog::TermLogger::new(
+    if let Err(err) = simplelog::CombinedLogger::init(vec![simplelog::TermLogger::new(
         log::LevelFilter::Info,
         simplelog::Config::default(),
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,
-    )])
-    .unwrap();
+    )]) {
+        log::error!("{}", err);
+    }
 }
 
 // * ------------------------------------ Server ------------------------------------ * //

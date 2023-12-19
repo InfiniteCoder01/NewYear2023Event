@@ -4,7 +4,7 @@ window.print = (text) => {
 };
 
 window.error = (text) => {
-    $('#console').append(`<div style=\"color: red;\">${text}</div>`)
+    $('#console').append(`<pre style=\"color: red;\">${text}</pre>`)
 };
 
 let backgroundTasks = [];
@@ -30,6 +30,8 @@ window.sendMessage = (message) => {
     socket.send(message);
 }
 
+window.vec2 = function (x, y) { return { x, y }; };
+
 // --------------------------------------- Run --------------------------------------- //
 setInterval(() => $('#console').scrollTop($('#console')[0].scrollHeight), 25);
 
@@ -38,6 +40,7 @@ const run = (code, language) => {
         clearInterval(task);
     }
     backgroundTasks = [];
+    $('#console').empty();
 
     if (language == "ace/mode/javascript") {
         // eval(prelude + code);

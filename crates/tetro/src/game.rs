@@ -162,6 +162,9 @@ pub enum State {
 
 #[derive(Clone, Debug)]
 pub struct Game {
+    pub uid: String,
+    pub name: String,
+
     pub board: Board,
     pub tetromino: Tetromino,
     pub placed: bool,
@@ -197,7 +200,7 @@ impl Particle {
                 Tweener::sine_in(0.0, rng.gen_range(-20.0..20.0), 1.0),
                 Tweener::sine_in(0.0, rng.gen_range(-20.0..20.0), 1.0),
             ),
-            size: Tweener::cubic_in(5.0, 0.0, 2.0),
+            size: Tweener::cubic_in(20.0, 0.0, 2.0),
             color_rg: Tweener::cubic_in(1.0, 0.0, 2.0),
             angle: 0.0,
         }
@@ -224,8 +227,11 @@ impl Particle {
 }
 
 impl Game {
-    pub fn new(size: vec2<usize>) -> Self {
+    pub fn new(size: vec2<usize>, uid: String, name: String) -> Self {
         Self {
+            uid,
+            name,
+
             board: Board::new(size),
             tetromino: Tetromino::random(size.x / 2),
             placed: false,
@@ -245,8 +251,8 @@ impl Game {
     }
 
     fn particle_rect(&mut self, tl: vec2<f64>, size: vec2<f64>) {
-        for y in (0..=size.y as usize).step_by(5) {
-            for x in (0..=size.x as usize).step_by(5) {
+        for y in (10..=size.y as usize).step_by(10) {
+            for x in (10..=size.x as usize).step_by(10) {
                 self.particles
                     .push(Particle::new(tl + vec2(x as _, y as _)));
             }
@@ -262,6 +268,15 @@ impl Game {
     ) -> bool {
         let frame_time = self.last_frame.elapsed().as_secs_f64();
         self.last_frame = std::time::Instant::now();
+
+        if self.uid == "AI" {
+            if self.tetromino.ai(&mut self.board) {
+                self.speedup(true);
+            }
+            if self.zone_meter >= self.zone_max * 0.4 {
+                self.zone();
+            }
+        }
 
         if self.timer.elapsed() >= self.move_time && self.state == State::Normal {
             self.timer = std::time::Instant::now();

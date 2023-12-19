@@ -54,6 +54,11 @@ impl Schedule {
         }
     }
 
+    pub fn get(&self, path: &str) -> Option<&ScheduledPlugin> {
+        self.plugins
+            .get(self.plugins.iter().position(|plugin| plugin.path == path)?)
+    }
+
     pub fn get_next(&self, path: &str) -> Option<&ScheduledPlugin> {
         self.plugins
             .get(self.plugins.iter().position(|plugin| plugin.path == path)? + 1)
@@ -66,6 +71,16 @@ impl Schedule {
             .rev()
             .find(|plugin| current_time >= plugin.timestamp)
     }
+}
+
+fn spawn_stdin_channel() -> std::sync::mpsc::Receiver<String> {
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    std::thread::spawn(move || loop {
+        let mut buffer = String::new();
+        std::io::stdin().read_line(&mut buffer).unwrap();
+        tx.send(buffer).unwrap();
+    });
+    rx
 }
 
 fn main() {
@@ -91,6 +106,7 @@ fn main() {
     let mut schedule = Schedule::default();
     let mut plugin: Option<LoadedPlugin> = None;
 
+    let stdin_channel = std::sync::Mutex::new(spawn_stdin_channel());
     streamer::stream(
         // (1920, 1080),
         (1280, 720),
@@ -101,6 +117,23 @@ fn main() {
             if schedule_timer.elapsed().as_secs_f32() > 0.5 {
                 schedule_timer = std::time::Instant::now();
                 schedule = Schedule::load();
+            }
+
+            if let Ok(command) = stdin_channel.lock().unwrap().try_recv() {
+                #[allow(clippy::single_match)]
+                match command.trim() {
+                    "reload" => {
+                        if let Some(loaded) = &plugin {
+                            if let Some(scheduled) = schedule.get(&loaded.path) {
+                                if !scheduled.path.is_empty() {
+                                    log::info!("Reloading plugin {}", scheduled.path);
+                                    plugin = Some(LoadedPlugin::load(scheduled));
+                                }
+                            }
+                        }
+                    }
+                    _ => (),
+                }
             }
 
             if let Some(loaded_plugin) = &mut plugin {

@@ -64,13 +64,16 @@
   <script type="text/python">
     from browser import window
     import traceback
+    import sys
+
+    class ErrorWriter(object):
+      def write(self, data):
+        window.error(data)
+
+    sys.stderr = ErrorWriter()
 
     def run_python(code):
-        try:
-            exec(code)
-        except Exception:
-            error_message = traceback.format_exc()
-            window.error(error_message)
+      exec(code)
 
     window.run_python = run_python
 
@@ -79,6 +82,7 @@
     registerClient = window.registerClient
     sendMessage = window.sendMessage
     jQuery = window.jQuery
+    vec2 = window.vec2
   </script>
 
   <script type="module" src="editor/editor.js"></script>

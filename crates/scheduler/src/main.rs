@@ -120,8 +120,9 @@ fn main() {
             }
 
             if let Ok(command) = stdin_channel.lock().unwrap().try_recv() {
-                #[allow(clippy::single_match)]
-                match command.trim() {
+                let command = command.trim();
+                let (cmd, args) = command.split_once(' ').unwrap_or((command, ""));
+                match cmd {
                     "reload" => {
                         if let Some(loaded) = &plugin {
                             if let Some(scheduled) = schedule.get(&loaded.path) {
@@ -132,7 +133,20 @@ fn main() {
                             }
                         }
                     }
-                    _ => (),
+                    "plugin" => {
+                        if let Some(loaded) = &plugin {
+                            if let Some(command) = &loaded.plugin.command {
+                                unsafe {
+                                    command(args);
+                                }
+                            } else{
+                                log::info!("Plugin \"{}\" does not implement CLI interface!", loaded.path)
+                            }
+                        } else {
+                            log::error!("No plugin loaded to execute plugin command!");
+                        }
+                    }
+                    _ => log::error!("{cmd}: not a valid command!"),
                 }
             }
 

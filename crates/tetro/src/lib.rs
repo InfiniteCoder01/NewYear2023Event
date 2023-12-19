@@ -84,9 +84,36 @@ pub extern "C" fn load(args: &str) {
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
             }
 
-            let send_uid = uid.clone();
+            let listener_uid = uid.clone();
+            let handle = tokio::spawn(async move {
+                let uid = listener_uid;
+                while let Some(Ok(message)) = rx.next().await {
+                    if let Ok(command) = message.to_str() {
+                        let mut state = STATE.lock().unwrap();
+                        let state = state.as_mut().unwrap();
+                        if let Some(game) =
+                            state.games.iter_mut().take(2).find(|game| game.uid == uid)
+                        {
+                            match command {
+                                "CCW" => game.try_turn(true),
+                                "CW" => game.try_turn(false),
+                                "Left" => game.try_move(-1),
+                                "Right" => game.try_move(1),
+                                "Zone" => game.zone(),
+                                "FastFall" => game.speedup(true),
+                                "SlowFall" => game.speedup(false),
+                                _ => (),
+                            };
+                        } else {
+                            break;
+                        }
+                    }
+
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                }
+            });
+
             tokio::spawn(async move {
-                let uid = send_uid;
                 loop {
                     let message = {
                         let state = STATE.lock().unwrap();
@@ -126,7 +153,8 @@ pub extern "C" fn load(args: &str) {
 
                             Some(message)
                         } else {
-                            None
+                            handle.abort();
+                            break;
                         }
                     };
 
@@ -137,30 +165,6 @@ pub extern "C" fn load(args: &str) {
                         }
                     }
                     tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-                }
-            });
-            tokio::spawn(async move {
-                while let Some(Ok(message)) = rx.next().await {
-                    if let Ok(command) = message.to_str() {
-                        let mut state = STATE.lock().unwrap();
-                        let state = state.as_mut().unwrap();
-                        if let Some(game) =
-                            state.games.iter_mut().take(2).find(|game| game.uid == uid)
-                        {
-                            match command {
-                                "CCW" => game.try_turn(true),
-                                "CW" => game.try_turn(false),
-                                "Left" => game.try_move(-1),
-                                "Right" => game.try_move(1),
-                                "Zone" => game.zone(),
-                                "FastFall" => game.speedup(true),
-                                "SlowFall" => game.speedup(false),
-                                _ => (),
-                            };
-                        }
-                    }
-
-                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                 }
             });
         });
@@ -224,4 +228,22 @@ pub extern "C" fn frame(
     }
 
     true
+}
+
+#[no_mangle]
+#[allow(improper_ctypes_definitions)]
+pub extern "C" fn command(command: &str) {
+    if command == "skip" {
+        let mut state = STATE.lock().unwrap();
+        let state = state.as_mut().unwrap();
+
+        if state.games.len() >= 2 {
+            log::info!(
+                "Skipping game between {} and {}!",
+                state.games[0].name,
+                state.games[1].name
+            );
+            state.games.drain(..2);
+        }
+    }
 }

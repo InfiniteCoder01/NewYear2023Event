@@ -5,9 +5,14 @@ use libloading::Library;
 
 #[allow(improper_ctypes_definitions)]
 pub type PluginFrame = unsafe extern "C" fn(cairo::Context, f64, f64, Duration) -> bool;
+
+#[allow(improper_ctypes_definitions)]
+pub type PluginCommand = unsafe extern "C" fn(&str);
+
 pub struct Plugin<'a> {
     pub library: Library,
     pub frame: libloading::Symbol<'a, PluginFrame>,
+    pub command: Option<libloading::Symbol<'a, PluginCommand>>,
 }
 
 impl Plugin<'_> {
@@ -18,8 +23,15 @@ impl Plugin<'_> {
             let frame = (*(&library as *const Library))
                 .get::<PluginFrame>(b"frame")
                 .unwrap();
+            let command = (*(&library as *const Library))
+                .get::<PluginCommand>(b"command")
+                .ok();
             load(args);
-            Self { library, frame }
+            Self {
+                library,
+                frame,
+                command,
+            }
         }
     }
 }

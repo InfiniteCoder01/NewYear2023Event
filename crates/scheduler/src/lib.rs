@@ -126,3 +126,17 @@ pub type Color = (f64, f64, f64);
 pub fn color_to_u32(color: Color) -> u32 {
     ((color.0 * 255.0) as u32) << 16 | ((color.1 * 255.0) as u32) << 8 | ((color.2 * 255.0) as u32)
 }
+
+// * ----------------------------------- Firebase ----------------------------------- * //
+pub async fn get_firebase_admin() -> rs_firebase_admin_sdk::LiveAuthAdmin {
+    let live_app = rs_firebase_admin_sdk::App::live(
+        rs_firebase_admin_sdk::CustomServiceAccount::from_json(
+            &std::fs::read_to_string("firebase-private.json").unwrap(),
+        )
+        .unwrap()
+        .into(),
+    )
+    .await
+    .unwrap();
+    live_app.auth()
+}

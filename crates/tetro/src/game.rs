@@ -268,6 +268,7 @@ impl Game {
     ) -> bool {
         let frame_time = self.last_frame.elapsed().as_secs_f64();
         self.last_frame = std::time::Instant::now();
+        let offset = offset + vec2(0.0, tile * 1.5);
 
         if self.uid == "AI" {
             if self.tetromino.ai(&mut self.board) {
@@ -400,6 +401,22 @@ impl Game {
                 - std::f64::consts::PI / 2.0,
         );
         context.stroke().unwrap();
+
+        context.set_source_rgb(1.0, 1.0, 1.0);
+        context.select_font_face(
+            "Purisa",
+            cairo::FontSlant::Normal,
+            cairo::FontWeight::Normal,
+        );
+        context.set_font_size(tile);
+
+        if let Ok(extents) = context.text_extents(&self.name) {
+            context.move_to(
+                offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
+                offset.y - tile * 0.5,
+            );
+            context.show_text(&self.name).ok();
+        }
 
         true
     }

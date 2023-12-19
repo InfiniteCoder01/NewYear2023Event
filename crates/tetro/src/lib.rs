@@ -14,9 +14,9 @@ pub struct State {
 
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
-pub extern "C" fn load(args: &str) {
+pub extern "C" fn load(_: &str) {
     init_logger();
-    log::info!("Got args: {args:?}");
+
     restart_async_server(async {
         let routes = make_dev_server("tetro", &|uid, websocket| async move {
             use futures_util::stream::StreamExt;
@@ -33,6 +33,21 @@ pub extern "C" fn load(args: &str) {
                 };
             }
 
+            let name = {
+                use rs_firebase_admin_sdk::auth::FirebaseAuthService;
+                let user = get_firebase_admin()
+                    .await
+                    .get_user(
+                        rs_firebase_admin_sdk::auth::UserIdentifiers::builder()
+                            .with_uid(uid.clone())
+                            .build(),
+                    )
+                    .await
+                    .expect("Error while fetching user")
+                    .expect("User does not exist");
+                user.display_name.unwrap_or("Someone".to_owned())
+            };
+
             {
                 let success = {
                     let mut state = STATE.lock().unwrap();
@@ -42,11 +57,9 @@ pub extern "C" fn load(args: &str) {
                     } else if state.games.iter().any(|game| game.uid == uid) {
                         true
                     } else {
-                        state.games.push(Game::new(
-                            GAME_SIZE,
-                            uid.clone(),
-                            "TODO: Names".to_owned(),
-                        ));
+                        state
+                            .games
+                            .push(Game::new(GAME_SIZE, uid.clone(), name.clone()));
                         true
                     }
                 };
@@ -56,7 +69,7 @@ pub extern "C" fn load(args: &str) {
                 }
             }
 
-            // log::info!("{name} joined");
+            log::info!("{name} joined!",);
 
             loop {
                 if let Some(position) = {
@@ -199,11 +212,11 @@ pub extern "C" fn frame(
     }
 
     if let Some([game1, game2]) = &mut state.games.get_mut(..2) {
-        let tile = (height / game1.board.size.y.max(game2.board.size.y) as f64)
-            .min(width / (game1.board.size.x.max(game2.board.size.x) + 3) as f64 / 2.0);
+        let tile = (height / (game1.board.size.y.max(game2.board.size.y) as f64 + 1.5))
+            .min(width / (game1.board.size.x.max(game2.board.size.x) as f64 + 3.0) / 2.0);
 
-        let board1_size = game1.board.size.map(|x| x as f64) * tile + vec2(tile * 3.0, 0.0);
-        let board2_size = game2.board.size.map(|x| x as f64) * tile + vec2(tile * 3.0, 0.0);
+        let board1_size = game1.board.size.map(|x| x as f64) * tile + vec2(3.0, 1.5) * tile;
+        let board2_size = game2.board.size.map(|x| x as f64) * tile + vec2(3.0, 1.5) * tile;
         let padding = (width - (board1_size.x + board2_size.y)) / 3.0;
 
         // * Frames

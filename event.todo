@@ -1,4 +1,4 @@
 ✔ Enhance tetris boards to store account data and add a queue feature. (Enchance? AI written BTW.) @started(23-12-18 20:07) @done(23-12-18 21:44) @lasted(1h37m)
 [ ] Account names
-[ ] Develop a scheduler CLI to allow reloading of plugins. @started(23-12-19 21:32)
+✔ Develop a scheduler CLI to allow reloading of plugins. @started(23-12-19 21:32) @done(23-12-19 22:10) @lasted(38m55s)
 [ ] Change the channel

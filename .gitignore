@@ -14,3 +14,4 @@ Cargo.lock
 *.pdb
 
 private.toml
+firebase-private.json

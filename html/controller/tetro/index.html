@@ -32,113 +32,113 @@
                     } else {
                         $("#message").text(msg.data);
                     }
-                } else {
-                    processMessage(msg, state => {
-                        const container = $("#container");
-                        const canvas = $("canvas#display")[0];
-                        canvas.width = container.width();
-                        canvas.height = container.height();
-                        const context = canvas.getContext("2d");
+                    return;
+                }
+                processMessage(msg, state => {
+                    const container = $("#container");
+                    const canvas = $("canvas#display")[0];
+                    canvas.width = container.width();
+                    canvas.height = container.height();
+                    const context = canvas.getContext("2d");
 
-                        const [width, height] = [state.width, state.height]
+                    const [width, height] = [state.width, state.height]
 
-                        const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
-                        const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
+                    const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
+                    const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
 
-                        context.fillStyle = "black";
-                        context.rect(0, 0, canvas.width, canvas.height);
-                        context.fill();
+                    context.fillStyle = "black";
+                    context.rect(0, 0, canvas.width, canvas.height);
+                    context.fill();
 
-                        context.strokeStyle = "#000580";
-                        context.lineWidth = 5;
+                    context.strokeStyle = "#000580";
+                    context.lineWidth = 5;
+                    context.beginPath();
+                    context.rect(offset[0], offset[1], width * tile, height * tile);
+                    context.stroke();
+
+                    context.lineWidth = 1;
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            context.fillStyle = `#${state.field[y][x].toString(16).padStart(6, "0")}`;
+                            context.beginPath();
+                            context.rect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
+                            context.stroke();
+                            context.beginPath();
+                            context.rect(offset[0] + x * tile, offset[1] + y * tile, tile - 1, tile - 1);
+                            context.fill();
+                        }
+                    }
+
+                    context.fillStyle = `#ffffff`;
+                    for (let zoneLine of state.zoneLines) {
                         context.beginPath();
-                        context.rect(offset[0], offset[1], width * tile, height * tile);
-                        context.stroke();
+                        context.rect(offset[0], offset[1] + zoneLine * tile, width * tile, tile);
+                        context.fill();
+                    }
 
-                        context.lineWidth = 1;
-                        for (let y = 0; y < height; y++) {
-                            for (let x = 0; x < width; x++) {
-                                context.fillStyle = `#${state.field[y][x].toString(16).padStart(6, "0")}`;
-                                context.beginPath();
-                                context.rect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
-                                context.stroke();
-                                context.beginPath();
-                                context.rect(offset[0] + x * tile, offset[1] + y * tile, tile - 1, tile - 1);
-                                context.fill();
-                            }
-                        }
+                    let tetromino = state.tetromino;
+                    context.fillStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
+                    for (let block of tetromino.blocks) {
+                        const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
+                        context.beginPath();
+                        context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 5, tile - 5);
+                        context.fill();
+                    }
 
-                        context.fillStyle = `#ffffff`;
-                        for (let zoneLine of state.zoneLines) {
-                            context.beginPath();
-                            context.rect(offset[0], offset[1] + zoneLine * tile, width * tile, tile);
-                            context.fill();
-                        }
-
-                        let tetromino = state.tetromino;
-                        context.fillStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
+                    while (true) {
+                        tetromino.y++;
+                        let collides = false;
                         for (let block of tetromino.blocks) {
-                            const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
-                            context.beginPath();
-                            context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 5, tile - 5);
-                            context.fill();
-                        }
-
-                        while (true) {
-                            tetromino.y++;
-                            let collides = false;
-                            for (let block of tetromino.blocks) {
-                                if (block.y + tetromino.y >= height || state.field[block.y + tetromino.y][block.x + tetromino.x] != 0) {
-                                    collides = true;
-                                    break;
-                                }
-                            }
-                            if (collides) {
-                                tetromino.y--;
+                            if (block.y + tetromino.y >= height || state.field[block.y + tetromino.y][block.x + tetromino.x] != 0) {
+                                collides = true;
                                 break;
                             }
                         }
-
-                        context.strokeStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
-                        for (let block of tetromino.blocks) {
-                            const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
-                            context.beginPath();
-                            context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 4, tile - 4);
-                            context.stroke();
+                        if (collides) {
+                            tetromino.y--;
+                            break;
                         }
+                    }
 
-                        const zonePos = [offset[0] - tile * 2.1, offset[1] + tile * 1.2];
-                        context.strokeStyle = "#0020ff";
-                        context.lineWidth = 1;
+                    context.strokeStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
+                    for (let block of tetromino.blocks) {
+                        const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
                         context.beginPath();
-                        context.arc(
-                            zonePos[0],
-                            zonePos[1],
-                            tile + 3.5,
-                            0.0,
-                            Math.PI * 2.0,
-                        );
-                        context.arc(
-                            zonePos[0],
-                            zonePos[1],
-                            tile - 3.5,
-                            0.0,
-                            Math.PI * 2.0,
-                        );
+                        context.rect(offset[0] + x * tile + 2, offset[1] + y * tile + 2, tile - 4, tile - 4);
                         context.stroke();
+                    }
 
-                        context.lineWidth = 5;
-                        context.beginPath();
-                        context.arc(
-                            zonePos[0],
-                            zonePos[1],
-                            tile,
-                            -Math.PI / 2.0,
-                            state.zoneMeter / state.zoneMax * Math.PI * 2.0 - Math.PI / 2.0,
-                        );
-                        context.stroke();
-                    });
-                }
+                    const zonePos = [offset[0] - tile * 2.1, offset[1] + tile * 1.2];
+                    context.strokeStyle = "#0020ff";
+                    context.lineWidth = 1;
+                    context.beginPath();
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile + 3.5,
+                        0.0,
+                        Math.PI * 2.0,
+                    );
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile - 3.5,
+                        0.0,
+                        Math.PI * 2.0,
+                    );
+                    context.stroke();
+
+                    context.lineWidth = 5;
+                    context.beginPath();
+                    context.arc(
+                        zonePos[0],
+                        zonePos[1],
+                        tile,
+                        -Math.PI / 2.0,
+                        state.zoneMeter / state.zoneMax * Math.PI * 2.0 - Math.PI / 2.0,
+                    );
+                    context.stroke();
+                });
             };
         });
 

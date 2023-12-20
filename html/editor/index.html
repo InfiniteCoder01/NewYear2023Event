@@ -39,6 +39,10 @@
       Watch this event on youtube
     </a>
 
+    <a class="styled-item panel-item">
+      Note: Your code will stop if you close the tab!
+    </a>
+
     <button id="settings-button" class="styled-item panel-item icon-button" style="float: right;"><i
         class="fa fa-gear"></i></button>
     <button onclick="document.location.pathname='/account'" class="styled-item panel-item icon-button"
@@ -63,14 +67,6 @@
 
   <script type="text/python">
     from browser import window
-    import traceback
-    import sys
-
-    class ErrorWriter(object):
-      def write(self, data):
-        window.error(data)
-
-    sys.stderr = ErrorWriter()
 
     def run_python(code):
       exec(code)

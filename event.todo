@@ -1,8 +1,12 @@
 Important:
     [ ] JS language
-    [ ] Messages and errors sent by server to window.print/window.error
+    ✔ Messages and errors sent by server to window.print/window.error @started(23-12-20 17:08) @done(23-12-20 17:19) @lasted(11m32s)
     [ ] BGR bug fix
-    [ ] Use window.onerror and get rid of python's error handling
+    ✔ Use window.onerror and get rid of python's error handling @started(23-12-20 16:55) @done(23-12-20 17:06) @lasted(11m14s)
+    ✔ Note: Your program will stop if you close the tab! @started(23-12-20 17:41) @done(23-12-20 17:41) @lasted(19s)
+    ✔ socket.close(); on run @started(23-12-20 17:19) @done(23-12-20 17:38) @lasted(19m30s)
+    [ ] Tetris AI example
+    [ ] Points: Christmas decorations
 
 ✔ Enhance tetris boards to store account data and add a queue feature. (Enchance? AI written BTW.) @started(23-12-18 20:07) @done(23-12-18 21:44) @lasted(1h37m)
 [ ] window.something functions docs

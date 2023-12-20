@@ -2,6 +2,6 @@
 resolver = "1"
 members = ["crates/*"]
 
-[profile.dev]
+[profile.release]
 opt-level = 2
 overflow-checks = false

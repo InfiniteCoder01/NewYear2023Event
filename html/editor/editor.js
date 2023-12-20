@@ -51,13 +51,13 @@ editor.setOptions({
 
 // Selectors
 const languages = {
-    "Lua": "ace/mode/lua",
-    "BASH": "ace/mode/bash",
+    // "Lua": "ace/mode/lua",
+    // "BASH": "ace/mode/bash",
     "JavaScript": "ace/mode/javascript",
-    "Python": "ace/mode/python",
-    "Rust": "ace/mode/rust",
-    "C": "ace/mode/c_cpp",
-    "C++": "ace/mode/c_cpp",
+    // "Python": "ace/mode/python",
+    // "Rust": "ace/mode/rust",
+    // "C": "ace/mode/c_cpp",
+    // "C++": "ace/mode/c_cpp",
 };
 
 const keybindSchemes = {
@@ -78,7 +78,7 @@ const changeLanguage = (language) => {
 
 createSelector("theme-selector", themes, theme => changeTheme(editor, theme), "Monokai");
 createSelector("keybinds-selector", keybindSchemes, changeKeybinds, "VSCode");
-createSelector("language-selector", languages, changeLanguage, "Python");
+createSelector("language-selector", languages, changeLanguage, "JavaScript");
 
 // Font size
 const setFontSize = (size) => {
@@ -126,7 +126,7 @@ function loadCode() {
                 editor.setValue(doc.data().text);
             } else {
                 const templates = {
-                    "ace/mode/python": "python.py",
+                    "ace/mode/javascript": "javascript.js",
                 }
                 fetch(`controller/template/${templates[editor.session.getMode().$id]}`)
                     .then(response => response.text())

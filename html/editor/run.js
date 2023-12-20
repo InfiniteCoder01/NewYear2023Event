@@ -1,75 +1,77 @@
 // --------------------------------------- APIs --------------------------------------- //
-window.print = (text) => {
+function print(text) {
     $('#console').append(`<div>${text}</div>`)
 };
 
-window.error = (text) => {
+function error(text) {
     $('#console').append(`<pre style=\"color: red;\">${text}</pre>`)
 };
 
-let backgroundTasks = [];
-window.repeat = function (callback, interval) {
-    backgroundTasks.push(setInterval(callback, interval));
-};
+// let socket;
+// window.registerClient = (callback) => {
+//     if (socket != null) {
+//         socket.close();
+//     }
+//     socket = new WebSocket(
+//         `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/tetro/${account.uid}`
+//     );
 
-import processMessage from "/controller/api.js";
+//     socket.onmessage = msg => {
+//         if (typeof msg.data === "string") {
+//             if (msg.data.startsWith("!")) {
+//                 error(msg.data.substring(1));
+//             } else {
+//                 print(msg.data);
+//             }
+//             return;
+//         }
+//         console.log(callback);
+//         processMessage(msg, callback);
+//     };
+// }
 
-let socket;
-window.registerClient = (callback) => {
-    if (socket != null) {
-        socket.close();
-    }
-    socket = new WebSocket(
-        `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/tetro/${account.uid}`
-    );
+// window.sendMessage = (message) => {
+//     try {
+//         socket.send(message);
+//     } catch (_) {
+//         return false;
+//     }
+//     return true;
+// }
 
-    socket.onmessage = msg => {
-        if (typeof msg.data === "string") {
-            if (msg.data.startsWith("!")) {
-                error(msg.data.substring(1));
-            } else {
-                print(msg.data);
-            }
-            return;
-        }
-        processMessage(msg, callback);
-    };
-}
+// window.vec2 = function (x, y) { return { x, y }; };
 
-window.sendMessage = (message) => {
-    try {
-        socket.send(message);
-    } catch (_) {
-        return false;
-    }
-    return true;
-}
-
-window.vec2 = function (x, y) { return { x, y }; };
-
-console.error = (...data) => error(data[0]);
+// console.error = (...data) => error(data[0]);
 
 // --------------------------------------- Run --------------------------------------- //
 setInterval(() => $('#console').scrollTop($('#console')[0].scrollHeight), 25);
 
+let worker;
 const run = (code, language) => {
-    for (let task of backgroundTasks) {
-        clearInterval(task);
-    }
-    backgroundTasks = [];
+    // for (let task of backgroundTasks) {
+    //     clearInterval(task);
+    // }
+    // backgroundTasks = [];
     $('#console').empty();
 
-    if (socket != null) {
-        socket.close();
-        socket = null;
-    }
+    // if (socket != null) {
+    //     socket.close();
+    //     socket = null;
+    // }
 
-    if (language == "ace/mode/javascript") {
-        // eval(prelude + code);
-    } else if (language == "ace/mode/python") {
-        run_python(code);
-    }
+    if (worker) worker.terminate();
+    worker = new Worker("editor/worker.js");
+    worker.onmessage = message => {
+        if (message.data.error != null) error(message.data.error);
+        else print(message.data);
+    };
+    worker.onerror = err => error(err.message);
 
+    worker.postMessage({
+        code,
+        language,
+        connectionURL: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/$NAME/${account.uid}`
+    });
 };
 
 export default run;

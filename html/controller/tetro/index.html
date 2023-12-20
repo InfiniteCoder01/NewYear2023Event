@@ -17,13 +17,13 @@
         Zone</p>
 
     <script type="module">
-        import processMessage from "/controller/api.js";
+        $.ajax({dataType: "script", cache: true, url: '/controller/api.js'});
 
         let socket;
 
         requireAuth(() => {
             socket = new WebSocket(
-                `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/tetro/${account.uid}`
+                `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/${apiName}/${account.uid}`
             );
             socket.onmessage = msg => {
                 if (typeof msg.data === "string") {

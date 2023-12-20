@@ -1,3 +1,5 @@
+const apiName = "tetro";
+
 const processMessage = (msg, callback) => {
     msg.data.arrayBuffer().then(buffer => {
         const data = new DataView(buffer);
@@ -14,8 +16,9 @@ const processMessage = (msg, callback) => {
 
         const zoneMeter = data.getFloat64(cursor, true);
         const zoneMax = data.getFloat64(cursor + 8, true);
-        const zoneLinesCount = data.getUint32(cursor + 16, true);
-        cursor += 20;
+        const inZone = data.getUint8(cursor + 16);
+        const zoneLinesCount = data.getUint32(cursor + 17, true);
+        cursor += 21;
 
         const zoneLines = Array.from({ length: zoneLinesCount },
             (_, index) => data.getFloat64(cursor + index * 8, true)
@@ -40,12 +43,15 @@ const processMessage = (msg, callback) => {
 
         callback({
             width, height, field,
-            zoneMeter, zoneMax, zoneLines,
+            zoneMeter, zoneMax, inZone, zoneLines,
             tetromino,
 
             get: function ({ x, y }) {
                 if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
                     return 0;
+                }
+                if (y > this.height - this.zoneLines.length) {
+                    return 0xffffff;
                 }
                 return this.field[y][x];
             },
@@ -131,9 +137,22 @@ const processMessage = (msg, callback) => {
                         y: this.tetromino.y + block.y
                     };
                 });
+            },
+
+            complete_lines: function () {
+                let linesCleared = 0;
+                for (let y = 0; y < height; y++) {
+                    let lineFilled = true;
+                    for (let x = 0; x < width; x++) {
+                        if (this.get({ x, y }) == 0) {
+                            lineFilled = false;
+                            break;
+                        }
+                    }
+                    if (lineFilled) linesCleared++;
+                }
+                return linesCleared;
             }
         });
     });
 };
-
-export default processMessage;

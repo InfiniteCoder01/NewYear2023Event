@@ -5,7 +5,7 @@ Important:
     ✔ Use window.onerror and get rid of python's error handling @started(23-12-20 16:55) @done(23-12-20 17:06) @lasted(11m14s)
     ✔ Note: Your program will stop if you close the tab! @started(23-12-20 17:41) @done(23-12-20 17:41) @lasted(19s)
     ✔ socket.close(); on run @started(23-12-20 17:19) @done(23-12-20 17:38) @lasted(19m30s)
-    [ ] Tetris AI example
+    ✔ Tetris AI example @done(23-12-20 22:08)
     [ ] Points: Christmas decorations
 
 ✔ Enhance tetris boards to store account data and add a queue feature. (Enchance? AI written BTW.) @started(23-12-18 20:07) @done(23-12-18 21:44) @lasted(1h37m)

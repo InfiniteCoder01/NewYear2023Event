@@ -1,23 +1,36 @@
-self.onmessage = ({ data }) => {
+importScripts("/controller/api.js");
 
-    // Converting the string back to a string 
-    const func = new Function(
-        data.function
-    )();
-
-    // Evaluates the function and sends 
-    // the data back to the main file 
-    // const timerFunction = () => {
-    //     randomPositions = func(
-    //         data.arguments[0], data.arguments[1]
-    //     );
-    //     self.postMessage(randomPositions);
-    // }
-
-    // // Runs the timerFunction at every  
-    // // interval specified in the arguments. 
-    // setInterval(() => {
-    //     timerFunction();
-    // }, data.arguments[2])
-// console.log(func());
+function print(message) {
+    self.postMessage(message);
 }
+
+function error(message) {
+    self.postMessage({ error: message });
+}
+
+let socket, websocketURL;
+
+function connect(onMessage) {
+    socket = new WebSocket(websocketURL.replace("$NAME", apiName));
+    socket.onmessage = msg => {
+        if (typeof msg.data === "string") {
+            if (msg.data.startsWith("!")) {
+                error(msg.data.substring(1));
+            } else {
+                print(msg.data);
+            }
+            return;
+        }
+        processMessage(msg, onMessage);
+    };
+}
+
+self.onmessage = function (event) {
+    const { code, language, connectionURL } = event.data;
+    websocketURL = connectionURL;
+    new Function(code)();
+
+    if (language == "ace/mode/javascript") {
+    } else if (language == "ace/mode/python") {
+    }
+};

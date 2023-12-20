@@ -143,6 +143,7 @@ pub extern "C" fn load(_: &str) {
                             }
                             message.extend_from_slice(&game.zone_meter.to_le_bytes());
                             message.extend_from_slice(&game.zone_max.to_le_bytes());
+                            message.push((game.state == game::State::Zone) as u8);
                             message.extend_from_slice(
                                 &(game.board.zone_lines.len() as u32).to_le_bytes(),
                             );
@@ -174,11 +175,13 @@ pub extern "C" fn load(_: &str) {
                     if let Some(message) = message {
                         if let Err(err) = tx.send(Message::binary(message)).await {
                             log::debug!("Send error: {err}");
+                            handle.abort();
                             break;
                         }
                     }
                     tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
                 }
+                log::info!("{name} left.");
             });
         });
         routes

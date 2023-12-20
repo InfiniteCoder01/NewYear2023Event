@@ -140,7 +140,7 @@ const processMessage = (msg, callback) => {
             },
 
             complete_lines: function () {
-                let linesCleared = 0;
+                let linesCleared = [];
                 for (let y = 0; y < height; y++) {
                     let lineFilled = true;
                     for (let x = 0; x < width; x++) {
@@ -149,7 +149,7 @@ const processMessage = (msg, callback) => {
                             break;
                         }
                     }
-                    if (lineFilled) linesCleared++;
+                    if (lineFilled) linesCleared.push(y);
                 }
                 return linesCleared;
             }

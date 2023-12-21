@@ -14,11 +14,12 @@ const processMessage = (msg, callback) => {
         );
         cursor += width * height * 4;
 
-        const zoneMeter = data.getFloat64(cursor, true);
-        const zoneMax = data.getFloat64(cursor + 8, true);
-        const inZone = data.getUint8(cursor + 16);
-        const zoneLinesCount = data.getUint32(cursor + 17, true);
-        cursor += 21;
+        const points = data.getBigUint64(cursor, true);
+        const zoneMeter = data.getFloat64(cursor + 8, true);
+        const zoneMax = data.getFloat64(cursor + 16, true);
+        const inZone = data.getUint8(cursor + 32);
+        const zoneLinesCount = data.getUint32(cursor + 33, true);
+        cursor += 37;
 
         const zoneLines = Array.from({ length: zoneLinesCount },
             (_, index) => data.getFloat64(cursor + index * 8, true)
@@ -43,7 +44,7 @@ const processMessage = (msg, callback) => {
 
         callback({
             width, height, field,
-            zoneMeter, zoneMax, inZone, zoneLines,
+            points, zoneMeter, zoneMax, inZone, zoneLines,
             tetromino,
 
             get: function ({ x, y }) {

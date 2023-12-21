@@ -19,6 +19,7 @@ pub extern "C" fn load(_: &str) {
 
     restart_async_server(async {
         let routes = make_dev_server("tetro", &|uid, websocket| async move {
+            points::give(&uid, 10).await;
             use futures_util::stream::StreamExt;
             use futures_util::SinkExt;
             use warp::filters::ws::Message;
@@ -34,18 +35,10 @@ pub extern "C" fn load(_: &str) {
             }
 
             let name = {
-                use rs_firebase_admin_sdk::auth::FirebaseAuthService;
-                let user = get_firebase_admin()
+                get_firebase_user(uid.clone())
                     .await
-                    .get_user(
-                        rs_firebase_admin_sdk::auth::UserIdentifiers::builder()
-                            .with_uid(uid.clone())
-                            .build(),
-                    )
-                    .await
-                    .expect("Error while fetching user")
-                    .expect("User does not exist");
-                user.display_name.unwrap_or("Someone".to_owned())
+                    .and_then(|user| user.display_name)
+                    .unwrap_or("Someone".to_owned())
             };
 
             {
@@ -141,6 +134,7 @@ pub extern "C" fn load(_: &str) {
                                 message
                                     .extend_from_slice(&tile.map_or(0, color_to_u32).to_le_bytes());
                             }
+                            message.extend_from_slice(&game.points.to_le_bytes());
                             message.extend_from_slice(&game.zone_meter.to_le_bytes());
                             message.extend_from_slice(&game.zone_max.to_le_bytes());
                             message.push((game.state == game::State::Zone) as u8);

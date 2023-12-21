@@ -74,7 +74,7 @@ impl Tetromino {
             let pos = block.map(f64::from) * tile + offset + vec2::splat(padding);
             context.rectangle(pos.x, pos.y, tile - padding * 2.0, tile - padding * 2.0);
         }
-        context.fill().unwrap();
+        log_error!("{}"; context.fill());
     }
 
     pub fn draw_shadow(&self, context: &cairo::Context, tile: f64, offset: vec2<f64>) {
@@ -84,7 +84,7 @@ impl Tetromino {
             let pos = block.map(f64::from) * tile + offset + vec2::splat(padding);
             context.rectangle(pos.x, pos.y, tile - padding * 2.0, tile - padding * 2.0);
         }
-        context.stroke().unwrap();
+        log_error!("{}"; context.stroke());
     }
 
     pub fn turn(&mut self, ccw: bool) {

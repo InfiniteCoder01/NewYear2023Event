@@ -5,7 +5,7 @@ Important:
     ✔ Note: Your program will stop if you close the tab! @started(23-12-20 17:41) @done(23-12-20 17:41) @lasted(19s)
     ✔ socket.close(); on run @started(23-12-20 17:19) @done(23-12-20 17:38) @lasted(19m30s)
     ✔ Tetris AI example @done(23-12-20 22:08)
-    [ ] Points: Christmas decorations
+    [ ] Points: Christmas decorations @started(23-12-21 15:28)
     [ ] Change the channel
 
 ✔ Enhance tetris boards to store account data and add a queue feature. (Enchance? AI written BTW.) @started(23-12-18 20:07) @done(23-12-18 21:44) @lasted(1h37m)
@@ -14,5 +14,6 @@ Important:
 [ ] Music plugin and youtube IRC
 [ ] Python?
 [ ] Blockly?
+[ ] "I want my code to be shared after the competition" checkbox
 ✔ Account names @done(23-12-19 23:15)
 ✔ Develop a scheduler CLI to allow reloading of plugins. @started(23-12-19 21:32) @done(23-12-19 22:10) @lasted(38m55s)

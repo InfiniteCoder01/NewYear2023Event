@@ -16,22 +16,38 @@ pub struct Plugin<'a> {
 }
 
 impl Plugin<'_> {
-    pub fn load(path: &str, args: &str) -> Self {
+    pub fn load(path: &str, args: &str) -> Option<Self> {
         unsafe {
-            let library = Library::new(std::path::Path::new(path).canonicalize().unwrap()).unwrap();
-            let load = library.get::<unsafe extern "C" fn(&str)>(b"load").unwrap();
-            let frame = (*(&library as *const Library))
-                .get::<PluginFrame>(b"frame")
-                .unwrap();
+            let library = try_log!(
+                "Failed to load plugin {:?}: {}!",
+                path;
+                Library::new(try_log!(
+                    "Failed to find plugin {:?}: {}!",
+                    path;
+                    std::path::Path::new(path).canonicalize()
+                    => None
+                ))
+                => None
+            );
+            let load = try_log!(
+                "Invalid plugin {}!";
+                library.get::<unsafe extern "C" fn(&str)>(b"load")
+                => None
+            );
+            let frame = try_log!(
+                "Invalid plugin {}!";
+                (*(&library as *const Library)).get::<PluginFrame>(b"frame")
+                => None
+            );
             let command = (*(&library as *const Library))
                 .get::<PluginCommand>(b"command")
                 .ok();
             load(args);
-            Self {
+            Some(Self {
                 library,
                 frame,
                 command,
-            }
+            })
         }
     }
 }
@@ -45,6 +61,36 @@ pub fn init_logger() {
     )]) {
         log::error!("{}", err);
     }
+}
+
+#[macro_export]
+macro_rules! log_error {
+    ($format: literal $(, $args: expr)*; $result: expr) => {
+        $result.map_or_else(
+            |err| {
+                log::error!($format, $($args,)* err);
+                None
+            },
+            Some,
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! try_map {
+    ($value: expr, $match: ident $(=> $return: expr)?) => {{
+        match $value  {
+            $match(x) => x,
+            _ => return $($return)?,
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! try_log {
+    ($format: literal $(, $args: expr)*; $result: expr $(=> $return: expr)?) => {
+        try_map!(log_error!($format $(, $args)*; $result), Some $(=> $return)?)
+    };
 }
 
 // * ------------------------------------ Server ------------------------------------ * //
@@ -128,15 +174,47 @@ pub fn color_to_u32(color: Color) -> u32 {
 }
 
 // * ----------------------------------- Firebase ----------------------------------- * //
-pub async fn get_firebase_admin() -> rs_firebase_admin_sdk::LiveAuthAdmin {
-    let live_app = rs_firebase_admin_sdk::App::live(
-        rs_firebase_admin_sdk::CustomServiceAccount::from_json(
-            &std::fs::read_to_string("firebase-private.json").unwrap(),
+pub async fn get_firebase_admin(
+) -> Option<rs_firebase_admin_sdk::App<rs_firebase_admin_sdk::GcpCredentials>> {
+    let firebase_credentials = try_log!(
+        "Failed to load firebase credentials: {}";
+        std::fs::read_to_string("firebase-private.json")
+        => None
+    );
+    let service_account = try_log!(
+        "Failed to load firebase auth data: {}";
+        rs_firebase_admin_sdk::CustomServiceAccount::from_json(&firebase_credentials)
+        => None
+    );
+    Some(try_log!(
+        "Failed to connect to firebase: {}";
+        rs_firebase_admin_sdk::App::live(service_account.into())
+        .await
+        => None
+    ))
+}
+
+pub async fn get_firebase_user(uid: String) -> Option<rs_firebase_admin_sdk::auth::User> {
+    if let Some(admin) = get_firebase_admin().await {
+        use rs_firebase_admin_sdk::auth::FirebaseAuthService;
+        log_error!(
+            "Error while fetching user: {}!";
+            admin
+                .auth()
+                .get_user(
+                    rs_firebase_admin_sdk::auth::UserIdentifiers::builder()
+                        .with_uid(uid)
+                        .build(),
+                )
+                .await
         )
-        .unwrap()
-        .into(),
-    )
-    .await
-    .unwrap();
-    live_app.auth()
+        .and_then(|user| {
+            if user.is_none() {
+                log::error!("Error: User does not exist!");
+            }
+            user
+        })
+    } else {
+        None
+    }
 }

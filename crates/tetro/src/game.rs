@@ -2,6 +2,7 @@ use super::tetromino::Tetromino;
 use batbox_la::*;
 use bidivec::BidiVec;
 use rand::Rng;
+use scheduler::*;
 use std::time::{Duration, Instant};
 use tween::Tweener;
 
@@ -108,7 +109,7 @@ impl Board {
             self.size.x as f64 * tile,
             self.size.y as f64 * tile,
         );
-        context.stroke().unwrap();
+        log_error!("{}"; context.stroke());
 
         context.set_source_rgb(0.0, 0.1, 0.5);
         context.set_line_width(1.0);
@@ -120,7 +121,7 @@ impl Board {
                     tile,
                     tile,
                 );
-                context.stroke().unwrap();
+                log_error!("{}"; context.stroke());
             }
         }
 
@@ -134,7 +135,7 @@ impl Board {
                         tile,
                         tile,
                     );
-                    context.fill().unwrap();
+                    log_error!("{}"; context.fill());
                 }
             }
         }
@@ -147,39 +148,9 @@ impl Board {
                 self.size.x as f64 * tile,
                 tile,
             );
-            context.fill().unwrap();
+            log_error!("{}"; context.fill());
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum State {
-    #[default]
-    Normal,
-    Zone,
-    ZoneEnding,
-}
-
-#[derive(Clone, Debug)]
-pub struct Game {
-    pub uid: String,
-    pub name: String,
-
-    pub board: Board,
-    pub tetromino: Tetromino,
-    pub placed: bool,
-
-    pub particles: Vec<Particle>,
-
-    pub timer: Instant,
-    pub move_time: Duration,
-    pub general_move_time: Duration,
-
-    pub state: State,
-    pub zone_meter: f64,
-    pub zone_max: f64,
-
-    pub last_frame: Instant,
 }
 
 #[derive(Clone, Debug)]
@@ -220,10 +191,41 @@ impl Particle {
             context.translate(center.x, center.y);
             context.rotate(self.angle);
             context.rectangle(-size * 0.5, -size * 0.5, size, size);
-            context.fill().unwrap();
+            log_error!("{}"; context.fill());
             context.identity_matrix();
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum State {
+    #[default]
+    Normal,
+    Zone,
+    ZoneEnding,
+}
+
+#[derive(Clone, Debug)]
+pub struct Game {
+    pub uid: String,
+    pub name: String,
+
+    pub board: Board,
+    pub tetromino: Tetromino,
+    pub placed: bool,
+
+    pub particles: Vec<Particle>,
+
+    pub timer: Instant,
+    pub move_time: Duration,
+    pub general_move_time: Duration,
+
+    pub points: u64,
+    pub zone_meter: f64,
+    pub zone_max: f64,
+    pub state: State,
+
+    pub last_frame: Instant,
 }
 
 impl Game {
@@ -242,12 +244,27 @@ impl Game {
 
             particles: Vec::new(),
 
-            state: State::Normal,
+            points: 0,
             zone_meter: 0.0,
             zone_max: 20.0,
+            state: State::Normal,
 
             last_frame: std::time::Instant::now(),
         }
+    }
+
+    pub fn add_points(&mut self, amount: u64) {
+        self.points += amount;
+        if self.uid != "AI" {
+            let uid = self.uid.clone();
+            tokio::spawn(async move {
+                points::give(&uid, amount).await;
+            });
+        }
+    }
+
+    pub fn lines_cleared_points(lines: usize) -> u64 {
+        (lines as f32).powf(1.5) as _
     }
 
     fn particle_rect(&mut self, tl: vec2<f64>, size: vec2<f64>) {
@@ -321,7 +338,8 @@ impl Game {
                         1.0,
                     ));
                 }
-            } else if self.state == State::Normal {
+            } else if self.state == State::Normal && !cleared_lines.is_empty() {
+                self.add_points(Self::lines_cleared_points(cleared_lines.len()));
                 self.zone_meter += cleared_lines.len() as f64 / 2.0;
                 self.zone_meter = self.zone_meter.min(self.zone_max);
             }
@@ -354,6 +372,8 @@ impl Game {
                     );
                     self.particle_rect(tl, size);
                 }
+                self.add_points(Self::lines_cleared_points(zone_lines));
+
                 self.board.zone_lines.clear();
                 self.board.shift(None, zone_lines as _, || None);
             }
@@ -381,7 +401,7 @@ impl Game {
             0.0,
             std::f64::consts::PI * 2.0,
         );
-        context.stroke().unwrap();
+        log_error!("{}"; context.stroke());
         context.arc(
             zone_pos.x,
             zone_pos.y,
@@ -389,7 +409,7 @@ impl Game {
             0.0,
             std::f64::consts::PI * 2.0,
         );
-        context.stroke().unwrap();
+        log_error!("{}"; context.stroke());
 
         context.set_line_width(5.0);
         context.arc(
@@ -400,7 +420,7 @@ impl Game {
             self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
                 - std::f64::consts::PI / 2.0,
         );
-        context.stroke().unwrap();
+        log_error!("{}"; context.stroke());
 
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.select_font_face(
@@ -416,6 +436,12 @@ impl Game {
                 offset.y - tile * 0.5,
             );
             context.show_text(&self.name).ok();
+        }
+
+        let points = self.points.to_string();
+        if let Ok(extents) = context.text_extents(&points) {
+            context.move_to(zone_pos.x - extents.width() / 2.0, zone_pos.y + tile * 2.5);
+            context.show_text(&points).ok();
         }
 
         true

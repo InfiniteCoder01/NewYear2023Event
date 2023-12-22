@@ -94,20 +94,49 @@ macro_rules! try_log {
 }
 
 // * ------------------------------------ Server ------------------------------------ * //
-pub fn make_dev_server<'a, U, F>(
+static RUNTIME: std::sync::Mutex<Option<tokio::runtime::Runtime>> = std::sync::Mutex::new(None);
+pub fn spawn_in_server_runtime<F>(future: F) -> tokio::task::JoinHandle<F::Output>
+where
+    F: std::future::Future + Send + 'static,
+    F::Output: Send + 'static,
+{
+    let mut runtime = RUNTIME.lock().unwrap();
+    if runtime.is_none() {
+        *runtime = Some(tokio::runtime::Runtime::new().unwrap());
+    }
+    runtime.as_ref().unwrap().spawn(future)
+}
+
+pub fn make_dev_server<'a, Socket, FutureSocket, Leaderboard>(
     name: &'a str,
-    socket: &'static F,
+    socket: &'static Socket,
+    leaderboard: &'a Leaderboard,
 ) -> impl warp::Filter<Extract = impl warp::reply::Reply> + Clone + 'a
 where
-    F: Fn(String, warp::filters::ws::WebSocket) -> U + Sync + 'static,
-    U: std::future::Future<Output = ()> + Send + 'static,
+    Socket: Fn(String, warp::filters::ws::WebSocket) -> FutureSocket + Sync + 'static,
+    FutureSocket: std::future::Future<Output = ()> + Send + 'static,
+    Leaderboard: Fn(Option<String>) -> warp::reply::Json + Sync,
 {
     use std::fs::read_to_string;
     use warp::Filter;
 
-    let routes = warp::path::end().map(|| "TODO".to_owned());
+    let routes = warp::path::end().map(|| {
+        warp::reply::html(
+            r#"<head><meta http-equiv="refresh" content="0; url=/controller" /></head>"#,
+        )
+    });
     let routes = routes.or(warp::path("account").and(warp::fs::dir("./html/account/")));
     let routes = routes.or(warp::path("editor").and(warp::fs::dir("./html/editor/")));
+    let routes = routes.or(warp::path("leaderboard").and(
+        warp::path::path("api")
+            .and(
+                warp::path::param::<String>()
+                    .and(warp::path::end())
+                    .map(|uid| leaderboard(Some(uid)))
+                    .or(warp::path::end().map(|| leaderboard(None))),
+            )
+            .or(warp::fs::dir("./html/leaderboard/")),
+    ));
 
     let routes = routes.or(warp::path("controller").and(
         warp::path::end()
@@ -145,11 +174,11 @@ pub fn restart_async_server<F>(
     F: warp::Filter + Clone + Send + Sync + 'static,
     F::Extract: warp::reply::Reply,
 {
-    static RUNTIME: std::sync::Mutex<Option<tokio::runtime::Runtime>> = std::sync::Mutex::new(None);
-
     let mut runtime = RUNTIME.lock().unwrap();
     *runtime = Some(tokio::runtime::Runtime::new().unwrap());
-    runtime.as_ref().unwrap().spawn(async {
+    let runtime = runtime.as_ref().unwrap();
+
+    runtime.spawn(async {
         log::info!("Starting server...");
         let routes = server.await;
 

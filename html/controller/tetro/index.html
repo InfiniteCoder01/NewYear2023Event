@@ -17,7 +17,7 @@
         Zone</p>
 
     <script type="module">
-        $.ajax({dataType: "script", cache: true, url: '/controller/api.js'});
+        $.ajax({ dataType: "script", cache: true, url: '/controller/api.js' });
 
         let socket;
 
@@ -34,14 +34,14 @@
                     }
                     return;
                 }
-                processMessage(msg, state => {
+                processMessage(msg, game => {
                     const container = $("#container");
                     const canvas = $("canvas#display")[0];
                     canvas.width = container.width();
                     canvas.height = container.height();
                     const context = canvas.getContext("2d");
 
-                    const [width, height] = [state.width, state.height]
+                    const [width, height] = [game.width, game.height]
 
                     const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
                     const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
@@ -59,7 +59,7 @@
                     context.lineWidth = 1;
                     for (let y = 0; y < height; y++) {
                         for (let x = 0; x < width; x++) {
-                            context.fillStyle = `#${state.field[y][x].toString(16).padStart(6, "0")}`;
+                            context.fillStyle = `#${game.field[y][x].toString(16).padStart(6, "0")}`;
                             context.beginPath();
                             context.rect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
                             context.stroke();
@@ -70,13 +70,13 @@
                     }
 
                     context.fillStyle = `#ffffff`;
-                    for (let zoneLine of state.zoneLines) {
+                    for (let zoneLine of game.zoneLines) {
                         context.beginPath();
                         context.rect(offset[0], offset[1] + zoneLine * tile, width * tile, tile);
                         context.fill();
                     }
 
-                    let tetromino = state.tetromino;
+                    let tetromino = game.tetromino;
                     context.fillStyle = `#${tetromino.color.toString(16).padStart(6, "0")}`;
                     for (let block of tetromino.blocks) {
                         const [x, y] = [block.x + tetromino.x, block.y + tetromino.y];
@@ -89,7 +89,7 @@
                         tetromino.y++;
                         let collides = false;
                         for (let block of tetromino.blocks) {
-                            if (block.y + tetromino.y >= height || state.field[block.y + tetromino.y][block.x + tetromino.x] != 0) {
+                            if (block.y + tetromino.y >= height || game.field[block.y + tetromino.y][block.x + tetromino.x] != 0) {
                                 collides = true;
                                 break;
                             }
@@ -135,9 +135,15 @@
                         zonePos[1],
                         tile,
                         -Math.PI / 2.0,
-                        state.zoneMeter / state.zoneMax * Math.PI * 2.0 - Math.PI / 2.0,
+                        game.zoneMeter / game.zoneMax * Math.PI * 2.0 - Math.PI / 2.0,
                     );
                     context.stroke();
+
+                    context.font = `${Math.trunc(tile)}px serif`;
+                    context.fillStyle = "white";
+                    context.fillText(game.points,
+                        zonePos[0] - context.measureText(game.points).width / 2.0,
+                        zonePos[1] + tile * 2.5);
                 });
             };
         });

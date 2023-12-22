@@ -22,6 +22,8 @@ function scoreFunction(game) {
 
     let dropY = game.tetromino.y;
 
+    let completeLines = game.complete_lines();
+
     let totalHeight = 0, maxHeight = 0, bumpines = 0;
     let lastHeight = null;
     for (let x = 0; x < game.width; x++) {
@@ -32,7 +34,7 @@ function scoreFunction(game) {
                 break;
             }
         }
-        totalHeight += height;
+        totalHeight += height - completeLines.length;
         maxHeight = Math.max(height, maxHeight);
         if (lastHeight != null) {
             bumpines += Math.abs(height - lastHeight);
@@ -49,11 +51,9 @@ function scoreFunction(game) {
         }
     }
 
-    let completeLines = game.complete_lines();
-
     const score = maxHeight * 0.0
         + totalHeight * -0.510066
-        + completeLines * 0.760666
+        + completeLines.length * 0.760666
         + holes * -0.35663
         + bumpines * -0.184483; // Weights are taken from here: https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
 
@@ -125,4 +125,5 @@ function callback(game) {
     }
 }
 
+print("Connecting...");
 connect(callback);

@@ -257,7 +257,7 @@ impl Game {
         self.points += amount;
         if self.uid != "AI" {
             let uid = self.uid.clone();
-            tokio::spawn(async move {
+            spawn_in_server_runtime(async move {
                 points::give(&uid, amount).await;
             });
         }

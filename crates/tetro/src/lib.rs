@@ -19,7 +19,6 @@ pub extern "C" fn load(_: &str) {
 
     restart_async_server(async {
         let routes = make_dev_server("tetro", &|uid, websocket| async move {
-            points::give(&uid, 10).await;
             use futures_util::stream::StreamExt;
             use futures_util::SinkExt;
             use warp::filters::ws::Message;
@@ -177,7 +176,7 @@ pub extern "C" fn load(_: &str) {
                 }
                 log::info!("{name} left.");
             });
-        });
+        }, points::make_leaderboard_server());
         routes
     });
 

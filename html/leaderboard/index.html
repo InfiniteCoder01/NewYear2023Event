@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Leaderboard</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="/account/auth.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item link" href="https://www.youtube.com/@InfiniteCoder02">
+                Watch this event on youtube
+            </a>
+        </div>
+
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                <a href="/account" class="navbar-item">
+                    <a href="/editor" class="navbar-item">
+                        <span class="icon"><i class="fa fa-code"></i></span>
+                    </a>
+                    <a href="/controller" class="navbar-item">
+                        <span class="icon"><i class="fa fa-gamepad"></i></span>
+                    </a>
+                    <a href="/account" class="navbar-item">
+                        <span class="icon"><i class="fa fa-user"></i></span>
+                    </a>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container is-widescreen">
+        <h1 class="title">Leaderboard</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                account = user.multiFactor.user;
+            }
+
+            const leaderboard = $.get(`/leaderboard/api/${account ? account.uid : ""}`, function (leaderboard) {
+                const table = $("#leaderboard");
+                for (let i = 0; i < leaderboard.length; i++) {
+                    const entry = leaderboard[i];
+                    const table_entry = $("<tr>")
+                        .append($("<th>").text(i + 1))
+                        .append($("<td>").text(entry.name))
+                        .append($("<td>").html(entry.points + '<span class="icon"><img src="/leaderboard/christmas_decoration.svg" alt="Christmas Decorations" /></span>'));
+                    if (entry.highlighted) table_entry.addClass("is-selected");
+                    table.append(table_entry);
+                }
+            });;
+        });
+    </script>
+</body>
+
+</html>

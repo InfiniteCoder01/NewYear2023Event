@@ -28,9 +28,13 @@ function connect(onMessage) {
 self.onmessage = function (event) {
     const { code, language, connectionURL } = event.data;
     websocketURL = connectionURL;
-    new Function(code)();
 
     if (language == "ace/mode/javascript") {
+        new Function(code)();
     } else if (language == "ace/mode/python") {
     }
 };
+
+self.onerror = function (event) {
+    error(event);
+}

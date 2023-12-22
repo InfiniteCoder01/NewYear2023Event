@@ -17,9 +17,9 @@ const processMessage = (msg, callback) => {
         const points = data.getBigUint64(cursor, true);
         const zoneMeter = data.getFloat64(cursor + 8, true);
         const zoneMax = data.getFloat64(cursor + 16, true);
-        const inZone = data.getUint8(cursor + 32);
-        const zoneLinesCount = data.getUint32(cursor + 33, true);
-        cursor += 37;
+        const inZone = data.getUint8(cursor + 24);
+        const zoneLinesCount = data.getUint32(cursor + 25, true);
+        cursor += 29;
 
         const zoneLines = Array.from({ length: zoneLinesCount },
             (_, index) => data.getFloat64(cursor + index * 8, true)

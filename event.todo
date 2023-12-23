@@ -1,18 +1,16 @@
 Important:
     [ ] BGR bug fix
-    [ ] Stream break bug fix @started(23-12-22 17:25)
-    [ ] Rebalance tetris
-    ✔ Leaderboard @started(23-12-22 17:22) @done(23-12-22 20:01) @lasted(2h39m7s)
+    ✔ Queueing system: @started(23-12-23 11:11) @done(23-12-23 17:56) @lasted(6h45m14s)
+        ✔ GameOver/Win screen @started(23-12-23 17:56) @done(23-12-23 21:52) @lasted(3h56m30s)
+        ✔ Waiting for players screen @done(23-12-23 21:52)
     [ ] Animation player
-    [ ] GameOver/Win screen
     [ ] Sonds for tetris
     [ ] r/place
     [ ] Change the channel
 
-[ ] Waiting for players screen
 [ ] Trainsitions
-[ ] Music plugin and youtube IRC
 [ ] Tick-tack-toe 5x5 more figures
+[ ] Music plugin and youtube IRC
 [ ] "I want my code to be shared after the competition" checkbox
 [ ] Python?
 [ ] Blockly?

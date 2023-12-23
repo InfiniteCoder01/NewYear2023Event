@@ -4,184 +4,34 @@ pub mod tetromino;
 use crate::game::Game;
 use batbox_la::*;
 use scheduler::*;
+use warp::filters::ws::{Message, WebSocket};
+
+pub struct State {
+    game: Option<[Game; 2]>,
+    last_frame: std::time::Instant,
+}
 
 static STATE: std::sync::Mutex<Option<State>> = std::sync::Mutex::new(None);
 const GAME_SIZE: vec2<usize> = vec2(10, 20);
-
-pub struct State {
-    games: Vec<Game>,
-}
 
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn load(_: &str) {
     init_logger();
-
     restart_async_server(async {
-        let routes = make_dev_server("tetro", &|uid, websocket| async move {
-            use futures_util::stream::StreamExt;
-            use futures_util::SinkExt;
-            use warp::filters::ws::Message;
-            let (mut tx, mut rx) = websocket.split();
-
-            macro_rules! try_send {
-                ($message: expr) => {
-                    if let Err(err) = tx.send($message).await {
-                        log::debug!("Send error: {err}");
-                        return;
-                    }
-                };
-            }
-
-            let name = {
-                get_firebase_user(uid.clone())
-                    .await
-                    .and_then(|user| user.display_name)
-                    .unwrap_or("Someone".to_owned())
-            };
-
-            {
-                let success = {
-                    let mut state = STATE.lock().unwrap();
-                    let state = state.as_mut().unwrap();
-                    if state.games.len() > 50 {
-                        false
-                    } else if state.games.iter().any(|game| game.uid == uid) {
-                        true
-                    } else {
-                        state
-                            .games
-                            .push(Game::new(GAME_SIZE, uid.clone(), name.clone()));
-                        true
-                    }
-                };
-                if !success {
-                    try_send!(Message::text("!Queue is full, try again later."));
-                    return;
-                }
-            }
-
-            log::info!("{name} joined!",);
-
-            loop {
-                if let Some(position) = {
-                    let mut state = STATE.lock().unwrap();
-                    let state = state.as_mut().unwrap();
-                    state.games.iter().position(|game| game.uid == uid)
-                } {
-                    if position < 2 {
-                        tx.send(Message::text("You're in!")).await.ok();
-                        break;
-                    }
-
-                    tx.send(Message::text(format!("Position in queue: {position}")))
-                        .await
-                        .ok();
-                } else {
-                    tx.send(Message::text(
-                        "!You're not in queue, something went horribly wrong.",
-                    ))
-                    .await
-                    .ok();
-                    return;
-                }
-
-                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-            }
-
-            let listener_uid = uid.clone();
-            let handle = tokio::spawn(async move {
-                let uid = listener_uid;
-                while let Some(Ok(message)) = rx.next().await {
-                    if let Ok(command) = message.to_str() {
-                        let mut state = STATE.lock().unwrap();
-                        let state = state.as_mut().unwrap();
-                        if let Some(game) =
-                            state.games.iter_mut().take(2).find(|game| game.uid == uid)
-                        {
-                            match command {
-                                "CCW" => game.try_turn(true),
-                                "CW" => game.try_turn(false),
-                                "Left" => game.try_move(-1),
-                                "Right" => game.try_move(1),
-                                "Zone" => game.zone(),
-                                "FastFall" => game.speedup(true),
-                                "SlowFall" => game.speedup(false),
-                                _ => (),
-                            };
-                        } else {
-                            break;
-                        }
-                    }
-
-                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-                }
-            });
-
-            tokio::spawn(async move {
-                loop {
-                    let message = {
-                        let state = STATE.lock().unwrap();
-                        let state = state.as_ref().unwrap();
-
-                        if let Some(game) = state.games.iter().take(2).find(|game| game.uid == uid)
-                        {
-                            let mut message = Vec::new();
-                            message.extend_from_slice(&(game.board.size.x as u32).to_le_bytes());
-                            message.extend_from_slice(&(game.board.size.y as u32).to_le_bytes());
-                            for tile in game.board.field.iter() {
-                                message
-                                    .extend_from_slice(&tile.map_or(0, color_to_u32).to_le_bytes());
-                            }
-                            message.extend_from_slice(&game.points.to_le_bytes());
-                            message.extend_from_slice(&game.zone_meter.to_le_bytes());
-                            message.extend_from_slice(&game.zone_max.to_le_bytes());
-                            message.push((game.state == game::State::Zone) as u8);
-                            message.extend_from_slice(
-                                &(game.board.zone_lines.len() as u32).to_le_bytes(),
-                            );
-                            for line in &game.board.zone_lines {
-                                message.extend_from_slice(&line.clone().move_by(0.0).to_le_bytes());
-                            }
-
-                            message.extend_from_slice(&game.tetromino.pos.x.to_le_bytes());
-                            message.extend_from_slice(&game.tetromino.pos.y.to_le_bytes());
-                            message.extend_from_slice(&(game.tetromino.size as u32).to_le_bytes());
-                            message.extend_from_slice(
-                                &color_to_u32(game.tetromino.color).to_le_bytes(),
-                            );
-                            message.extend_from_slice(
-                                &(game.tetromino.blocks.len() as u32).to_le_bytes(),
-                            );
-                            for block in &game.tetromino.blocks {
-                                message.push(block.x);
-                                message.push(block.y);
-                            }
-
-                            Some(message)
-                        } else {
-                            handle.abort();
-                            break;
-                        }
-                    };
-
-                    if let Some(message) = message {
-                        if let Err(err) = tx.send(Message::binary(message)).await {
-                            log::debug!("Send error: {err}");
-                            handle.abort();
-                            break;
-                        }
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-                }
-                log::info!("{name} left.");
-            });
-        }, points::make_leaderboard_server());
+        let routes = make_dev_server(
+            "tetro",
+            queue::make_queue(2, 50, Some(std::time::Duration::from_secs(30)), &socket),
+            points::make_leaderboard_server(),
+        );
         routes
     });
 
     let mut state = STATE.lock().unwrap();
-    *state = Some(State { games: Vec::new() });
+    *state = Some(State {
+        game: None,
+        last_frame: std::time::Instant::now(),
+    });
 }
 
 #[no_mangle]
@@ -194,20 +44,38 @@ pub extern "C" fn frame(
 ) -> bool {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
+    let frame_time = state.last_frame.elapsed().as_secs_f64();
+    state.last_frame = std::time::Instant::now();
 
-    if state.games.len() > 2 && state.games[0].uid == "AI" && state.games[1].uid == "AI" {
-        state.games.drain(..2);
-    } else {
-        while state.games.len() < 2 {
-            state.games.push(Game::new(
-                GAME_SIZE,
-                "AI".to_owned(),
-                "Builtin AI".to_owned(),
-            ))
+    match queue::get_state() {
+        queue::State::Playing
+            if match &state.game {
+                Some([game1, game2]) => game1.uid == "AI" && game2.uid == "AI",
+                None => true,
+            } =>
+        {
+            let mut players = queue::get_players();
+            while players.len() < 2 {
+                players.push(("AI".to_owned(), "Builtin AI".to_owned()));
+            }
+            let games = players
+                .into_iter()
+                .map(|player| Game::new(GAME_SIZE, player.0, player.1))
+                .collect::<Vec<_>>();
+            state.game = Some(games.try_into().unwrap());
         }
+        queue::State::WaitingForPlayers(_) => {
+            if state.game.is_none() {
+                state.game = Some([
+                    Game::new(GAME_SIZE, "AI".to_owned(), "Builtin AI".to_owned()),
+                    Game::new(GAME_SIZE, "AI".to_owned(), "Builtin AI".to_owned()),
+                ]);
+            }
+        }
+        _ => (),
     }
 
-    if let Some([game1, game2]) = &mut state.games.get_mut(..2) {
+    if let Some([game1, game2]) = &mut state.game {
         let tile = (height / (game1.board.size.y.max(game2.board.size.y) as f64 + 1.5))
             .min(width / (game1.board.size.x.max(game2.board.size.x) as f64 + 3.0) / 2.0);
 
@@ -215,24 +83,41 @@ pub extern "C" fn frame(
         let board2_size = game2.board.size.map(|x| x as f64) * tile + vec2(3.0, 1.5) * tile;
         let padding = (width - (board1_size.x + board2_size.y)) / 3.0;
 
-        // * Frames
-        let mut lost = !game1.frame(
-            &context,
-            tile,
-            vec2(padding + tile * 3.0, (height - board1_size.y) / 2.0),
-            Some(game2),
-        );
-        lost |= !game2.frame(
-            &context,
-            tile,
-            vec2(
-                board1_size.x + padding * 2.0 + tile * 3.0,
-                (height - board2_size.y) / 2.0,
-            ),
-            Some(game1),
-        );
-        if lost {
-            state.games.drain(..2);
+        let offset1 = vec2(padding + tile * 3.0, (height - board1_size.y) / 2.0);
+        let offset2 = vec2(width / 2.0 + offset1.x, (height - board2_size.y) / 2.0);
+
+        game1.draw(&context, tile, offset1, frame_time);
+        game2.draw(&context, tile, offset2, frame_time);
+
+        if let queue::State::Finished(time) = queue::get_state() {
+            if time.elapsed() > std::time::Duration::from_secs(10) {
+                state.game = None;
+                queue::restart();
+            }
+        } else {
+            // * Frames
+            let lost1 = !game1.update(tile, frame_time, Some(game2));
+            let lost2 = !game2.update(tile, frame_time, Some(game1));
+
+            if lost1 || lost2 {
+                if lost1 {
+                    game1.game_over(tile);
+                } else {
+                    game1.won(tile);
+                }
+
+                if lost2 {
+                    game2.game_over(tile);
+                } else {
+                    game2.won(tile);
+                }
+
+                if game1.uid == "AI" && game2.uid == "AI" {
+                    state.game = None;
+                } else {
+                    queue::set_state(queue::State::Finished(std::time::Instant::now()));
+                }
+            }
         }
     }
 
@@ -246,13 +131,96 @@ pub extern "C" fn command(command: &str) {
         let mut state = STATE.lock().unwrap();
         let state = state.as_mut().unwrap();
 
-        if state.games.len() >= 2 {
-            log::info!(
-                "Skipping game between {} and {}!",
-                state.games[0].name,
-                state.games[1].name
-            );
-            state.games.drain(..2);
+        if let Some([game1, game2]) = &state.game {
+            log::info!("Skipping game between {} and {}!", game1.name, game2.name);
+            state.game = None;
         }
     }
+}
+
+fn socket(
+    uid: String,
+    name: String,
+    mut tx: futures_util::stream::SplitSink<WebSocket, Message>,
+    mut rx: futures_util::stream::SplitStream<WebSocket>,
+) {
+    use futures_util::{SinkExt, StreamExt};
+
+    let reciever_uid = uid.clone();
+    let reciever = tokio::spawn(async move {
+        let uid = reciever_uid;
+        while let Some(Ok(message)) = rx.next().await {
+            if let Ok(command) = message.to_str() {
+                let mut state = STATE.lock().unwrap();
+                let state = state.as_mut().unwrap();
+
+                if let Some(game) = state
+                    .game
+                    .as_mut()
+                    .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
+                {
+                    match command {
+                        "CCW" => game.try_turn(true),
+                        "CW" => game.try_turn(false),
+                        "Left" => game.try_move(-1),
+                        "Right" => game.try_move(1),
+                        "Zone" => game.zone(),
+                        "FastFall" => game.speedup(true),
+                        "SlowFall" => game.speedup(false),
+                        _ => (),
+                    };
+                } else {
+                    return;
+                }
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        }
+    });
+
+    tokio::spawn(async move {
+        macro_rules! try_send {
+                ($message: expr) => {
+                    try_log!("Send error: {}"; tx.send($message).await)
+                };
+            }
+
+        loop {
+            let (message, terminate) = {
+                let state = STATE.lock().unwrap();
+                let state = state.as_ref().unwrap();
+
+                if let Some(game) = state
+                    .game
+                    .as_ref()
+                    .and_then(|games| games.iter().take(2).find(|game| game.uid == uid))
+                {
+                    if game.state == game::State::GameOver {
+                        (Message::text(format!("You lost :( But don't be disappointed! You've played well and got {} christmas decorations!", game.points)), true)
+                    } else if game.state == game::State::Won {
+                        (
+                            Message::text(format!(
+                                "Celebrate, because you won! You've got {} christmas decorations!",
+                                game.points
+                            )),
+                            true,
+                        )
+                    } else {
+                        (Message::binary(game.build_message()), false)
+                    }
+                } else {
+                    reciever.abort();
+                    break;
+                }
+            };
+
+            try_send!(message);
+            if terminate {
+                break;
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+        }
+        log::info!("{name} left.");
+    });
 }

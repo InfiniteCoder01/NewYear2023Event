@@ -55,7 +55,11 @@ impl Plugin<'_> {
 pub fn init_logger() {
     if let Err(err) = simplelog::CombinedLogger::init(vec![simplelog::TermLogger::new(
         log::LevelFilter::Info,
-        simplelog::Config::default(),
+        simplelog::ConfigBuilder::new()
+            .add_filter_ignore_str("firestore")
+            .add_filter_ignore_str("rs-firebase-admin-sdk")
+            .add_filter_ignore_str("gcp_auth")
+            .build(),
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,
     )]) {
@@ -109,11 +113,11 @@ where
 
 pub fn make_dev_server<'a, Socket, FutureSocket, Leaderboard>(
     name: &'a str,
-    socket: &'static Socket,
+    socket: Socket,
     leaderboard: &'a Leaderboard,
 ) -> impl warp::Filter<Extract = impl warp::reply::Reply> + Clone + 'a
 where
-    Socket: Fn(String, warp::filters::ws::WebSocket) -> FutureSocket + Sync + 'static,
+    Socket: Fn(String, warp::filters::ws::WebSocket) -> FutureSocket + Send + Sync + 'static,
     FutureSocket: std::future::Future<Output = ()> + Send + 'static,
     Leaderboard: Fn(Option<String>) -> warp::reply::Json + Sync,
 {
@@ -161,11 +165,15 @@ where
             .or(warp::fs::dir(format!("./html/controller/{name}/"))),
     ));
 
+    let socket = std::sync::Arc::new(socket);
     routes.or(warp::path("connect")
         .and(warp::path(name))
         .and(warp::path::param::<String>())
         .and(warp::ws())
-        .map(|uid, ws: warp::ws::Ws| ws.on_upgrade(|ws| socket(uid, ws))))
+        .map(move |uid, ws: warp::ws::Ws| {
+            let socket = socket.clone();
+            ws.on_upgrade(move |ws| socket(uid, ws))
+        }))
 }
 
 pub fn restart_async_server<F>(

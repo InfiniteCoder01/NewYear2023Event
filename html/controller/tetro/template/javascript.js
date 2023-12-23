@@ -111,7 +111,6 @@ function callback(game) {
         if (!game.try_turn(false)) break; // true for counter clockwise
     }
 
-    let speedup = false;
     if (best.rotation > 0) {
         socket.send(best.rotation > 2 ? "CCW" : "CW");
     } else if (best.x != game.tetromino.x) {

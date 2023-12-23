@@ -2144,6 +2144,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "queue"
+version = "0.1.0"
+dependencies = [
+ "batbox-la",
+ "cairo-rs",
+ "futures-util",
+ "log",
+ "rodio",
+ "rs-firebase-admin-sdk",
+ "scheduler",
+ "tokio",
+ "tween",
+ "warp",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2963,6 +2979,7 @@ dependencies = [
  "futures-util",
  "log",
  "points",
+ "queue",
  "rand",
  "rodio",
  "rs-firebase-admin-sdk",

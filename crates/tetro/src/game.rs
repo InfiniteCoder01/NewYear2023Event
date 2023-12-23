@@ -146,7 +146,7 @@ impl Board {
                 offset.x,
                 offset.y + y.move_by(frame_time) * tile,
                 self.size.x as f64 * tile,
-                tile,
+                tile + 2.0,
             );
             log_error!("{}"; context.fill());
         }
@@ -158,7 +158,7 @@ pub struct Particle {
     position: vec2<f64>,
     velocity: vec2<Tweener<f64, f64, tween::SineIn>>,
     size: Tweener<f64, f64, tween::CubicIn>,
-    color_rg: Tweener<f64, f64, tween::CubicIn>,
+    color_rga: Tweener<f64, f64, tween::CubicIn>,
     angle: f64,
 }
 
@@ -172,7 +172,7 @@ impl Particle {
                 Tweener::sine_in(0.0, rng.gen_range(-20.0..20.0), 1.0),
             ),
             size: Tweener::cubic_in(20.0, 0.0, 2.0),
-            color_rg: Tweener::cubic_in(1.0, 0.0, 2.0),
+            color_rga: Tweener::cubic_in(1.0, 0.0, 2.0),
             angle: 0.0,
         }
     }
@@ -183,11 +183,11 @@ impl Particle {
             self.velocity.y.move_by(frame_time),
         );
         self.position += velocity * frame_time;
-        let rg = self.color_rg.move_by(frame_time);
+        let rga = self.color_rga.move_by(frame_time);
         let size = self.size.move_by(frame_time);
         if !self.size.is_finished() {
             let center = offset + self.position;
-            context.set_source_rgb(rg, rg, 1.0);
+            context.set_source_rgba(rga, rga, 1.0, rga);
             context.translate(center.x, center.y);
             context.rotate(self.angle);
             context.rectangle(-size * 0.5, -size * 0.5, size, size);
@@ -203,6 +203,8 @@ pub enum State {
     Normal,
     Zone,
     ZoneEnding,
+    GameOver,
+    Won,
 }
 
 #[derive(Clone, Debug)]
@@ -276,17 +278,102 @@ impl Game {
         }
     }
 
-    pub fn frame(
+    pub fn draw(
         &mut self,
         context: &cairo::Context,
         tile: f64,
         offset: vec2<f64>,
-        opponent: Option<&mut Game>,
-    ) -> bool {
-        let frame_time = self.last_frame.elapsed().as_secs_f64();
-        self.last_frame = std::time::Instant::now();
+        frame_time: f64,
+    ) {
         let offset = offset + vec2(0.0, tile * 1.5);
 
+        self.board.draw(context, tile, offset, frame_time);
+        if self.state == State::GameOver {
+            self.zone_meter -= self.zone_meter * 0.1;
+        } else if self.state == State::Won {
+            self.zone_meter += (self.zone_max - self.zone_meter) * 0.1;
+        } else {
+            self.tetromino.draw(context, tile, offset);
+            let mut shadow = self.tetromino.clone();
+            shadow.drop(&self.board);
+            shadow.draw_shadow(context, tile, offset);
+        }
+
+        for particle in &mut self.particles {
+            particle.frame(context, offset, frame_time);
+        }
+        self.particles
+            .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
+
+        let zone_pos = offset + vec2(-2.1, 1.2) * tile;
+        context.set_source_rgb(0.0, 0.2, 1.0);
+        context.set_line_width(1.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile + 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        log_error!("{}"; context.stroke());
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile - 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        log_error!("{}"; context.stroke());
+
+        context.set_line_width(6.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile,
+            -std::f64::consts::PI / 2.0,
+            self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
+                - std::f64::consts::PI / 2.0,
+        );
+        log_error!("{}"; context.stroke());
+
+        context.set_source_rgb(1.0, 1.0, 1.0);
+        context.select_font_face(
+            "Purisa",
+            cairo::FontSlant::Normal,
+            cairo::FontWeight::Normal,
+        );
+        context.set_font_size(tile);
+
+        if let Ok(extents) = context.text_extents(&self.name) {
+            context.move_to(
+                offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
+                offset.y - tile * 0.5,
+            );
+            context.show_text(&self.name).ok();
+        }
+
+        if let Some(text) = match self.state {
+            State::GameOver => Some("Lost"),
+            State::Won => Some("Won"),
+            _ => None,
+        } {
+            if let Ok(extents) = context.text_extents(text) {
+                context.move_to(
+                    offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
+                    offset.y + tile * 2.5,
+                );
+                context.show_text(text).ok();
+            }
+        }
+
+        let points = self.points.to_string();
+        if let Ok(extents) = context.text_extents(&points) {
+            context.move_to(zone_pos.x - extents.width() / 2.0, zone_pos.y + tile * 2.5);
+            context.show_text(&points).ok();
+        }
+    }
+
+    pub fn update(&mut self, tile: f64, frame_time: f64, opponent: Option<&mut Game>) -> bool {
         if self.uid == "AI" {
             if self.tetromino.ai(&mut self.board) {
                 self.speedup(true);
@@ -355,7 +442,9 @@ impl Game {
             if zone_finished {
                 self.state = State::Normal;
                 if let Some(opponent) = opponent {
-                    opponent.board.garbage(self.board.zone_lines.len() / 4);
+                    opponent
+                        .board
+                        .garbage(((self.board.zone_lines.len() / 4) as f32).powf(1.5) as _);
                     // if self.board.zone_lines.len() >= 8 {
                     //     opponent.tetromino = opponent.tetromino.clone().scale(2);
                     // }
@@ -379,72 +468,36 @@ impl Game {
             }
         }
 
-        self.board.draw(context, tile, offset, frame_time);
-        self.tetromino.draw(context, tile, offset);
-        let mut shadow = self.tetromino.clone();
-        shadow.drop(&self.board);
-        shadow.draw_shadow(context, tile, offset);
-
-        for particle in &mut self.particles {
-            particle.frame(context, offset, frame_time);
-        }
-        self.particles
-            .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
-
-        let zone_pos = offset + vec2(-2.1, 1.2) * tile;
-        context.set_source_rgb(0.0, 0.2, 1.0);
-        context.set_line_width(1.0);
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile + 3.5,
-            0.0,
-            std::f64::consts::PI * 2.0,
-        );
-        log_error!("{}"; context.stroke());
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile - 3.5,
-            0.0,
-            std::f64::consts::PI * 2.0,
-        );
-        log_error!("{}"; context.stroke());
-
-        context.set_line_width(5.0);
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile,
-            -std::f64::consts::PI / 2.0,
-            self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
-                - std::f64::consts::PI / 2.0,
-        );
-        log_error!("{}"; context.stroke());
-
-        context.set_source_rgb(1.0, 1.0, 1.0);
-        context.select_font_face(
-            "Purisa",
-            cairo::FontSlant::Normal,
-            cairo::FontWeight::Normal,
-        );
-        context.set_font_size(tile);
-
-        if let Ok(extents) = context.text_extents(&self.name) {
-            context.move_to(
-                offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
-                offset.y - tile * 0.5,
-            );
-            context.show_text(&self.name).ok();
-        }
-
-        let points = self.points.to_string();
-        if let Ok(extents) = context.text_extents(&points) {
-            context.move_to(zone_pos.x - extents.width() / 2.0, zone_pos.y + tile * 2.5);
-            context.show_text(&points).ok();
-        }
-
         true
+    }
+
+    pub fn build_message(&self) -> Vec<u8> {
+        let mut message = Vec::new();
+        message.extend_from_slice(&(self.board.size.x as u32).to_le_bytes());
+        message.extend_from_slice(&(self.board.size.y as u32).to_le_bytes());
+        for tile in self.board.field.iter() {
+            message.extend_from_slice(&tile.map_or(0, color_to_u32).to_le_bytes());
+        }
+        message.extend_from_slice(&self.points.to_le_bytes());
+        message.extend_from_slice(&self.zone_meter.to_le_bytes());
+        message.extend_from_slice(&self.zone_max.to_le_bytes());
+        message.push((self.state == self::State::Zone) as u8);
+        message.extend_from_slice(&(self.board.zone_lines.len() as u32).to_le_bytes());
+        for line in &self.board.zone_lines {
+            message.extend_from_slice(&line.clone().move_by(0.0).to_le_bytes());
+        }
+
+        message.extend_from_slice(&self.tetromino.pos.x.to_le_bytes());
+        message.extend_from_slice(&self.tetromino.pos.y.to_le_bytes());
+        message.extend_from_slice(&(self.tetromino.size as u32).to_le_bytes());
+        message.extend_from_slice(&color_to_u32(self.tetromino.color).to_le_bytes());
+        message.extend_from_slice(&(self.tetromino.blocks.len() as u32).to_le_bytes());
+        for block in &self.tetromino.blocks {
+            message.push(block.x);
+            message.push(block.y);
+        }
+
+        message
     }
 
     pub fn try_move(&mut self, direction: i8) {
@@ -469,6 +522,27 @@ impl Game {
             self.move_time = Duration::from_millis(50);
         } else {
             self.move_time = self.general_move_time;
+        }
+    }
+
+    pub fn game_over(&mut self, tile: f64) {
+        self.state = State::GameOver;
+        self.explode(tile);
+    }
+
+    pub fn won(&mut self, tile: f64) {
+        self.add_points(self.points);
+        self.state = State::Won;
+        self.explode(tile);
+    }
+
+    pub fn explode(&mut self, tile: f64) {
+        self.board.zone_lines.clear();
+        for y in 0..self.board.size.y {
+            for x in 0..self.board.size.x {
+                self.particle_rect(vec2(x, y).map(|x| x as _) * tile, vec2::splat(tile));
+                self.board.set(vec2(x, y), None);
+            }
         }
     }
 }

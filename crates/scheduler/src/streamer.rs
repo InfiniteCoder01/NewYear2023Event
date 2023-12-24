@@ -23,7 +23,7 @@ pub fn stream<F>(
     let (videocvt, audioenc) = if virtual_mode {
         ("videoconvert", "faac")
     } else {
-        (/*"v4l2convert"*/"autovideoconvert", "voaacenc")
+        (/*"autovideoconvert"*/"v4l2convert", "voaacenc")
     };
 
     // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux

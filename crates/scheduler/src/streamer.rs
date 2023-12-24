@@ -17,8 +17,8 @@ pub fn stream<F>(
 {
     // let pipeline_str = format!(
     //     concat!(
-    //         "videotestsrc pattern=black ! cairooverlay ! ",
-    //         "videoconvert ! video/x-raw, format=I420, width={}, height={}, framerate={}/1 ! ",
+    //         "videotestsrc pattern=black ! cairooverlay ! width={}, height={}, format=BGRx ! ",
+    //         "videoconvert ! video/x-raw, format=I420 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
     //         "rtmp2sink location={} ",
@@ -52,8 +52,16 @@ pub fn stream<F>(
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
+                .format(gst_video::VideoFormat::Bgrx)
                 .build(),
         )
+        .build()
+        .unwrap();
+    let channel_swap_fixer = ElementFactory::make("rawvideoparse")
+        .property("use-sink-caps", false)
+        .property("width", width as i32)
+        .property("height", height as i32)
+        .property("format", gst_video::VideoFormat::Rgbx)
         .build()
         .unwrap();
 
@@ -104,6 +112,7 @@ pub fn stream<F>(
                 &background,
                 &video_overlay,
                 &source_caps_filter,
+                &channel_swap_fixer,
                 &videoconvert,
                 &basic_video_sink,
                 // &audio_source,
@@ -116,6 +125,7 @@ pub fn stream<F>(
             &background,
             &video_overlay,
             &source_caps_filter,
+            &channel_swap_fixer,
             &videoconvert,
             &basic_video_sink,
         ])
@@ -130,6 +140,7 @@ pub fn stream<F>(
                 &background,
                 &video_overlay,
                 &source_caps_filter,
+                &channel_swap_fixer,
                 &videoconvert,
                 &youtube_caps_filter,
                 &video_encoder,
@@ -146,6 +157,7 @@ pub fn stream<F>(
             &background,
             &video_overlay,
             &source_caps_filter,
+            &channel_swap_fixer,
             &videoconvert,
             &youtube_caps_filter,
             &video_encoder,

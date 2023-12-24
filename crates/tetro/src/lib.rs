@@ -18,6 +18,8 @@ pub struct State {
     game: Option<[Game; 2]>,
     last_frame: std::time::Instant,
     vs_screen: Option<VSScreen>,
+
+    endgame: soloud::audio::Wav,
 }
 
 static STATE: std::sync::Mutex<Option<State>> = std::sync::Mutex::new(None);
@@ -41,6 +43,8 @@ pub extern "C" fn load(_: &str) {
         game: None,
         last_frame: std::time::Instant::now(),
         vs_screen: None,
+
+        endgame: load_wav("Assets/tetro/endgame.wav"),
     });
 }
 
@@ -182,6 +186,8 @@ pub extern "C" fn frame(
             let lost2 = !game2.update(soloud, tile, frame_time, Some(game1));
 
             if lost1 || lost2 {
+                soloud.play(&state.endgame);
+
                 if lost1 {
                     game1.game_over(tile);
                 } else {

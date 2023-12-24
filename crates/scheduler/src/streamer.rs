@@ -3,7 +3,7 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-use gst::{parse_launch, prelude::*, Caps, Element, ElementFactory, Pipeline};
+use gst::{parse_launch, prelude::*, Element, Pipeline};
 use std::sync::Mutex;
 
 static VIDEO_SOURCE: Mutex<Option<Element>> = Mutex::new(None);
@@ -35,17 +35,17 @@ pub fn stream<F>(
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
             video/x-raw, width={width}, height={height}, format=BGRx !
-
             {videocvt} ! video/x-raw, format=I420 ! video_switch.
+
+            input-selector name=video_switch !
         "#
     );
     if virtual_mode {
-        pipeline += r#"input-selector name=video_switch ! autovideosink"#;
+        pipeline += "autovideosink";
     } else {
         pipeline += &format!(
             r#"
-                input-selector name=video_switch !
-                x264enc key-int-max=30 bitrate={video_bitrate} speed-preset="ultrafast" ! h264parse !
+                x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location={rtmp_uri}
 
                 pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.

@@ -47,6 +47,7 @@ pub extern "C" fn load(_: &str) {
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn frame(
+    soloud: &soloud::Soloud,
     context: cairo::Context,
     width: f64,
     height: f64,
@@ -177,8 +178,8 @@ pub extern "C" fn frame(
             }
         } else {
             // * Frames
-            let lost1 = !game1.update(tile, frame_time, Some(game2));
-            let lost2 = !game2.update(tile, frame_time, Some(game1));
+            let lost1 = !game1.update(soloud, tile, frame_time, Some(game2));
+            let lost2 = !game2.update(soloud, tile, frame_time, Some(game1));
 
             if lost1 || lost2 {
                 if lost1 {

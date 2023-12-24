@@ -16,6 +16,7 @@ glib = "0.18.3"
 
 batbox-la = "0.16.0"
 cairo-rs = "0.18.3"
+soloud = "1.0.5"
 
 serde = { version = "1.0.190", features = ["derive"] }
 toml = "0.8.6"

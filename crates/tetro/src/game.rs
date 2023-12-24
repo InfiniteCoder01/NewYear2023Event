@@ -10,7 +10,7 @@ use tween::Tweener;
 pub struct Board {
     pub size: vec2<usize>,
     pub field: BidiVec<Option<(f64, f64, f64)>>,
-    pub zone_lines: Vec<Tweener<f64, f64, tween::CubicInOut>>,
+    pub zone_lines: Vec<(Tweener<f64, f64, tween::CubicInOut>, bool)>,
 }
 
 impl Board {
@@ -141,7 +141,7 @@ impl Board {
         }
 
         context.set_source_rgb(1.0, 1.0, 1.0);
-        for y in &mut self.zone_lines {
+        for (y, _) in &mut self.zone_lines {
             context.rectangle(
                 offset.x,
                 offset.y + y.move_by(frame_time) * tile,
@@ -207,7 +207,7 @@ pub enum State {
     Won,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Game {
     pub uid: String,
     pub name: String,
@@ -228,6 +228,11 @@ pub struct Game {
     pub state: State,
 
     pub last_frame: Instant,
+
+    pub block_fall: soloud::audio::Wav,
+    pub line_clear: soloud::audio::Wav,
+    pub zone_line_fall: soloud::audio::Wav,
+    pub zone_finish: soloud::audio::Wav,
 }
 
 impl Game {
@@ -252,6 +257,11 @@ impl Game {
             state: State::Normal,
 
             last_frame: std::time::Instant::now(),
+
+            block_fall: load_wav("Assets/tetro/block-fall.wav"),
+            line_clear: load_wav("Assets/tetro/line-clear.wav"),
+            zone_line_fall: load_wav("Assets/tetro/zone-line-fall.wav"),
+            zone_finish: load_wav("Assets/tetro/zone-finish.wav"),
         }
     }
 
@@ -368,13 +378,26 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, tile: f64, frame_time: f64, opponent: Option<&mut Game>) -> bool {
+    pub fn update(
+        &mut self,
+        soloud: &soloud::Soloud,
+        tile: f64,
+        frame_time: f64,
+        opponent: Option<&mut Game>,
+    ) -> bool {
         if self.uid == "AI" {
             if self.tetromino.ai(&mut self.board) {
                 self.speedup(true);
             }
             if self.zone_meter >= self.zone_max * 0.4 {
                 self.zone();
+            }
+        }
+
+        for (line, landed) in &mut self.board.zone_lines {
+            if line.final_value() - line.move_by(0.0) < 2.0 / tile && !*landed {
+                soloud.play(&self.zone_line_fall);
+                *landed = true;
             }
         }
 
@@ -387,6 +410,7 @@ impl Game {
         }
         if self.placed {
             self.placed = false;
+            soloud.play(&self.block_fall);
             self.tetromino = Tetromino::random(self.board.size.x / 2);
             if !self.tetromino.fits(&self.board) {
                 return false;
@@ -401,6 +425,7 @@ impl Game {
                     let tl = vec2(0.0, y as f64 * tile);
                     let size = vec2(self.board.size.x as f64 * tile, tile);
                     self.particle_rect(tl, size);
+                    soloud.play(&self.line_clear);
                 }
             }
 
@@ -414,10 +439,13 @@ impl Game {
                 self.board
                     .shift(None, -(cleared_lines.len() as isize), || None);
                 for &line in cleared_lines.iter().rev() {
-                    self.board.zone_lines.push(Tweener::cubic_in_out(
-                        line as f64,
-                        (self.board.size.y - self.board.zone_lines.len() - 1) as f64,
-                        1.0,
+                    self.board.zone_lines.push((
+                        Tweener::cubic_in_out(
+                            line as f64,
+                            (self.board.size.y - self.board.zone_lines.len() - 1) as f64,
+                            1.0,
+                        ),
+                        false,
                     ));
                 }
             } else if self.state == State::Normal && !cleared_lines.is_empty() {
@@ -429,12 +457,13 @@ impl Game {
 
         if self.state == State::ZoneEnding {
             let mut zone_finished = true;
-            for line in &self.board.zone_lines {
+            for (line, _) in &self.board.zone_lines {
                 if !line.is_finished() {
                     zone_finished = false;
                 }
             }
             if zone_finished {
+                soloud.play(&self.zone_finish);
                 self.state = State::Normal;
                 if let Some(opponent) = opponent {
                     opponent
@@ -478,7 +507,7 @@ impl Game {
         message.extend_from_slice(&self.zone_max.to_le_bytes());
         message.push((self.state == self::State::Zone) as u8);
         message.extend_from_slice(&(self.board.zone_lines.len() as u32).to_le_bytes());
-        for line in &self.board.zone_lines {
+        for (line, _) in &self.board.zone_lines {
             message.extend_from_slice(&line.clone().move_by(0.0).to_le_bytes());
         }
 

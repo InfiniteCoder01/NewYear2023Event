@@ -1,10 +1,11 @@
+use batbox_la::*;
 pub use chrono::DateTime;
 pub use chrono::Duration;
 use libloading::Library;
-use batbox_la::*;
 
 #[allow(improper_ctypes_definitions)]
-pub type PluginFrame = unsafe extern "C" fn(cairo::Context, f64, f64, Duration) -> bool;
+pub type PluginFrame =
+    unsafe extern "C" fn(&soloud::Soloud, cairo::Context, f64, f64, Duration) -> bool;
 
 #[allow(improper_ctypes_definitions)]
 pub type PluginCommand = unsafe extern "C" fn(&str);
@@ -217,6 +218,14 @@ pub fn text_center_offset(context: &cairo::Context, text: &str) -> Option<vec2<f
             extents.height() / 2.0 + extents.y_bearing(),
         )
     })
+}
+
+pub fn load_wav(path: impl AsRef<std::path::Path>) -> soloud::audio::Wav {
+    use soloud::*;
+    let path = path.as_ref();
+    let mut wav = audio::Wav::default();
+    log_error!("Failed to load audio {}: {}", path.display(); wav.load(path));
+    wav
 }
 
 // * ----------------------------------- Firebase ----------------------------------- * //

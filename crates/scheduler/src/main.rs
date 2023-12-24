@@ -114,6 +114,8 @@ fn main() {
     let mut schedule = Schedule::default();
     let mut plugin: Option<LoadedPlugin> = None;
 
+    let soloud = soloud::Soloud::default().unwrap();
+
     let stdin_channel = std::sync::Mutex::new(spawn_stdin_channel());
     streamer::stream(
         // (1920, 1080),
@@ -165,6 +167,7 @@ fn main() {
                 let next = schedule.get_next(&loaded_plugin.path);
                 if !unsafe {
                     (loaded_plugin.plugin.frame)(
+                        &soloud,
                         context,
                         width,
                         height,

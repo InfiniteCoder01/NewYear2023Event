@@ -57,6 +57,13 @@ pub fn stream<F>(
         .build()
         .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
+    let channel_swap_fixer = ElementFactory::make("rawvideoparse")
+        .property("use-sink-caps", false)
+        .property("width", width as i32)
+        .property("height", height as i32)
+        .property("format", gst_video::VideoFormat::Rgbx)
+        .build()
+        .unwrap();
     let source_caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
@@ -66,13 +73,6 @@ pub fn stream<F>(
                 .format(gst_video::VideoFormat::Bgrx)
                 .build(),
         )
-        .build()
-        .unwrap();
-    let channel_swap_fixer = ElementFactory::make("rawvideoparse")
-        .property("use-sink-caps", false)
-        .property("width", width as i32)
-        .property("height", height as i32)
-        .property("format", gst_video::VideoFormat::Rgbx)
         .build()
         .unwrap();
 
@@ -145,8 +145,8 @@ pub fn stream<F>(
                 &background,
                 &background_caps_filter,
                 &video_overlay,
-                &source_caps_filter,
                 &channel_swap_fixer,
+                &source_caps_filter,
                 &videoconvert,
                 &youtube_caps_filter,
                 &video_encoder,
@@ -163,8 +163,8 @@ pub fn stream<F>(
             &background,
             &background_caps_filter,
             &video_overlay,
-            &source_caps_filter,
             &channel_swap_fixer,
+            &source_caps_filter,
             &videoconvert,
             &youtube_caps_filter,
             &video_encoder,

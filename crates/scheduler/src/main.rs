@@ -2,6 +2,8 @@ use chrono::{Local, TimeZone};
 use scheduler::*;
 use serde::Deserialize;
 
+mod streamer;
+
 #[derive(Debug, Deserialize)]
 pub struct Private {
     key: String,

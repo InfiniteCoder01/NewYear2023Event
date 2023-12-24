@@ -45,6 +45,17 @@ pub fn stream<F>(
         .property_from_str("pattern", "black")
         .build()
         .unwrap();
+    let background_caps_filter = ElementFactory::make("capsfilter")
+        .property(
+            "caps",
+            gst_video::VideoCapsBuilder::new()
+                .width(width as _)
+                .height(height as _)
+                .format(gst_video::VideoFormat::Bgrx)
+                .build(),
+        )
+        .build()
+        .unwrap();
     let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
     let source_caps_filter = ElementFactory::make("capsfilter")
         .property(
@@ -62,18 +73,6 @@ pub fn stream<F>(
         .property("width", width as i32)
         .property("height", height as i32)
         .property("format", gst_video::VideoFormat::Rgbx)
-        .build()
-        .unwrap();
-    let channel_swap_recovery_cvt = ElementFactory::make(cvt).build().unwrap();
-    let channel_swap_recovery_filter = ElementFactory::make("capsfilter")
-        .property(
-            "caps",
-            gst_video::VideoCapsBuilder::new()
-                .width(width as _)
-                .height(height as _)
-                .format(gst_video::VideoFormat::Bgrx)
-                .build(),
-        )
         .build()
         .unwrap();
 
@@ -115,50 +114,39 @@ pub fn stream<F>(
 
     // * Virtual mode
     let basic_video_sink = ElementFactory::make("autovideosink").build().unwrap();
-    // let basic_audio_sink = ElementFactory::make("autoaudiosink").build().unwrap();
 
     if virtual_mode {
         // * Add elements
         pipeline
             .add_many([
                 &background,
+                &background_caps_filter,
                 &video_overlay,
                 &source_caps_filter,
-                // &channel_swap_fixer,
-                // &channel_swap_recovery_cvt,
-                // &channel_swap_recovery_filter,
                 &videoconvert,
                 &basic_video_sink,
-                // &audio_source,
-                // &basic_audio_sink,
             ])
             .unwrap();
 
         // * Link video
         gst::Element::link_many([
             &background,
+            &background_caps_filter,
             &video_overlay,
             &source_caps_filter,
-            // &channel_swap_fixer,
-            // &channel_swap_recovery_cvt,
-            // &channel_swap_recovery_filter,
             &videoconvert,
             &basic_video_sink,
         ])
         .unwrap();
-
-        // * Link audio
-        // gst::Element::link_many([&audio_source, &basic_audio_sink]).unwrap();
     } else {
         // * Add elements
         pipeline
             .add_many([
                 &background,
+                &background_caps_filter,
                 &video_overlay,
                 &source_caps_filter,
                 &channel_swap_fixer,
-                &channel_swap_recovery_cvt,
-                &channel_swap_recovery_filter,
                 &videoconvert,
                 &youtube_caps_filter,
                 &video_encoder,
@@ -173,11 +161,10 @@ pub fn stream<F>(
         // * Link video
         gst::Element::link_many([
             &background,
+            &background_caps_filter,
             &video_overlay,
             &source_caps_filter,
             &channel_swap_fixer,
-            &channel_swap_recovery_cvt,
-            &channel_swap_recovery_filter,
             &videoconvert,
             &youtube_caps_filter,
             &video_encoder,

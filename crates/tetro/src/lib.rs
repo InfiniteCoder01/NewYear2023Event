@@ -73,22 +73,19 @@ pub extern "C" fn frame(
             vs_screen.player2.y.move_by(frame_time),
         );
 
-        context.set_font_size(60.0);
-        if let Ok(extents) = context.text_extents("VS") {
+        context.set_font_size(height / 10.0);
+        if let Some(offset) = text_center_offset(&context, "VS") {
             context.set_source_rgb(1.0, 1.0, 1.0);
-            context.move_to(
-                (width - extents.width()) / 2.0,
-                (height - extents.height()) / 2.0,
-            );
+            context.move_to(width / 2.0 - offset.x, height / 2.0 - offset.y);
             log_error!("{}"; context.show_text("VS"));
         }
 
-        context.set_font_size(40.0);
-        context.set_source_rgb(1.0, 0.0, 0.0);
+        context.set_font_size(height / 20.0);
+        context.set_source_rgb(0.96, 0.33, 0.33);
         context.move_to(player1.x, player1.y);
         log_error!("{}"; context.show_text(&game1.name));
 
-        context.set_source_rgb(0.0, 0.0, 1.0);
+        context.set_source_rgb(0.18, 0.38, 1.0);
         context.move_to(player2.x, player2.y);
         log_error!("{}"; context.show_text(&game2.name));
 
@@ -118,10 +115,10 @@ pub extern "C" fn frame(
                 .map(|player| Game::new(GAME_SIZE, player.0, player.1))
                 .collect::<Vec<_>>();
 
-            context.set_font_size(height / 40.0);
-            if let (Ok(extents1), Ok(extents2)) = (
-                context.text_extents(&games[0].name),
-                context.text_extents(&games[1].name),
+            context.set_font_size(height / 20.0);
+            if let (Some(offset1), Some(offset2)) = (
+                text_center_offset(&context, &games[0].name),
+                text_center_offset(&context, &games[1].name),
             ) {
                 let vs_tween = |value_delta: f64, percent: f32| {
                     value_delta * ((percent * 2.0 - 1.0).powi(7) / 2.0 + 0.5) as f64
@@ -131,32 +128,17 @@ pub extern "C" fn frame(
 
                 state.vs_screen = Some(VSScreen {
                     player1: vec2(
-                        Tweener::new(
-                            -extents1.width(),
-                            width / 2.0,
-                            time,
-                            Box::new(vs_tween),
-                        ),
-                        Tweener::new(
-                            -extents1.height(),
-                            height,
-                            time,
-                            Box::new(vs_tween),
-                        ),
+                        Tweener::new(-offset1.x * 2.0, width / 2.0, time, Box::new(vs_tween)),
+                        Tweener::new(-offset1.y * 2.0, height, time, Box::new(vs_tween)),
                     ),
                     player2: vec2(
                         Tweener::new(
                             width,
-                            width / 2.0 - extents2.width(),
+                            width / 2.0 - offset2.x * 2.0,
                             time,
                             Box::new(vs_tween),
                         ),
-                        Tweener::new(
-                            height,
-                            -extents2.height(),
-                            time,
-                            Box::new(vs_tween),
-                        ),
+                        Tweener::new(height, -offset2.y * 2.0, time, Box::new(vs_tween)),
                     ),
                 });
             }

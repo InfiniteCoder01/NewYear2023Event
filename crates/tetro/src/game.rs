@@ -339,9 +339,9 @@ impl Game {
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.set_font_size(tile);
 
-        if let Ok(extents) = context.text_extents(&self.name) {
+        if let Some(text_offset) = text_center_offset(context, &self.name) {
             context.move_to(
-                offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
+                offset.x + (self.board.size.x as f64 * tile) / 2.0 - text_offset.x,
                 offset.y - tile * 0.5,
             );
             context.show_text(&self.name).ok();
@@ -352,9 +352,9 @@ impl Game {
             State::Won => Some("Won"),
             _ => None,
         } {
-            if let Ok(extents) = context.text_extents(text) {
+            if let Some(text_offset) = text_center_offset(context, text) {
                 context.move_to(
-                    offset.x + (self.board.size.x as f64 * tile - extents.width()) / 2.0,
+                    offset.x + (self.board.size.x as f64 * tile) / 2.0 - text_offset.x,
                     offset.y + tile * 2.5,
                 );
                 context.show_text(text).ok();
@@ -362,8 +362,8 @@ impl Game {
         }
 
         let points = self.points.to_string();
-        if let Ok(extents) = context.text_extents(&points) {
-            context.move_to(zone_pos.x - extents.width() / 2.0, zone_pos.y + tile * 2.5);
+        if let Some(text_offset) = text_center_offset(context, &points) {
+            context.move_to(zone_pos.x - text_offset.x, zone_pos.y + tile * 2.5);
             context.show_text(&points).ok();
         }
     }

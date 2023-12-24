@@ -1,7 +1,7 @@
-pub mod streamer;
 pub use chrono::DateTime;
 pub use chrono::Duration;
 use libloading::Library;
+use batbox_la::*;
 
 #[allow(improper_ctypes_definitions)]
 pub type PluginFrame = unsafe extern "C" fn(cairo::Context, f64, f64, Duration) -> bool;
@@ -208,6 +208,15 @@ pub type Color = (f64, f64, f64);
 
 pub fn color_to_u32(color: Color) -> u32 {
     ((color.0 * 255.0) as u32) << 16 | ((color.1 * 255.0) as u32) << 8 | ((color.2 * 255.0) as u32)
+}
+
+pub fn text_center_offset(context: &cairo::Context, text: &str) -> Option<vec2<f64>> {
+    context.text_extents(text).ok().map(|extents| {
+        vec2(
+            extents.width() / 2.0 + extents.x_bearing(),
+            extents.height() / 2.0 + extents.y_bearing(),
+        )
+    })
 }
 
 // * ----------------------------------- Firebase ----------------------------------- * //

@@ -2514,6 +2514,7 @@ dependencies = [
 name = "scheduler"
 version = "0.1.0"
 dependencies = [
+ "batbox-la",
  "cairo-rs",
  "chrono",
  "glib",

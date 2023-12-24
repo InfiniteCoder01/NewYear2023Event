@@ -64,6 +64,18 @@ pub fn stream<F>(
         .property("format", gst_video::VideoFormat::Rgbx)
         .build()
         .unwrap();
+    let channel_swap_recovery_cvt = ElementFactory::make(cvt).build().unwrap();
+    let channel_swap_recovery_filter = ElementFactory::make("capsfilter")
+        .property(
+            "caps",
+            gst_video::VideoCapsBuilder::new()
+                .width(width as _)
+                .height(height as _)
+                .format(gst_video::VideoFormat::Bgrx)
+                .build(),
+        )
+        .build()
+        .unwrap();
 
     // * Convert
     let videoconvert = ElementFactory::make(cvt).build().unwrap();
@@ -113,6 +125,8 @@ pub fn stream<F>(
                 &video_overlay,
                 &source_caps_filter,
                 &channel_swap_fixer,
+                &channel_swap_recovery_cvt,
+                &channel_swap_recovery_filter,
                 &videoconvert,
                 &basic_video_sink,
                 // &audio_source,
@@ -126,6 +140,8 @@ pub fn stream<F>(
             &video_overlay,
             &source_caps_filter,
             &channel_swap_fixer,
+            &channel_swap_recovery_cvt,
+            &channel_swap_recovery_filter,
             &videoconvert,
             &basic_video_sink,
         ])
@@ -141,6 +157,8 @@ pub fn stream<F>(
                 &video_overlay,
                 &source_caps_filter,
                 &channel_swap_fixer,
+                &channel_swap_recovery_cvt,
+                &channel_swap_recovery_filter,
                 &videoconvert,
                 &youtube_caps_filter,
                 &video_encoder,
@@ -158,6 +176,8 @@ pub fn stream<F>(
             &video_overlay,
             &source_caps_filter,
             &channel_swap_fixer,
+            &channel_swap_recovery_cvt,
+            &channel_swap_recovery_filter,
             &videoconvert,
             &youtube_caps_filter,
             &video_encoder,

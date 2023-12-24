@@ -337,11 +337,6 @@ impl Game {
         log_error!("{}"; context.stroke());
 
         context.set_source_rgb(1.0, 1.0, 1.0);
-        context.select_font_face(
-            "Purisa",
-            cairo::FontSlant::Normal,
-            cairo::FontWeight::Normal,
-        );
         context.set_font_size(tile);
 
         if let Ok(extents) = context.text_extents(&self.name) {

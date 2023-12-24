@@ -4,11 +4,20 @@ pub mod tetromino;
 use crate::game::Game;
 use batbox_la::*;
 use scheduler::*;
+use tween::Tweener;
 use warp::filters::ws::{Message, WebSocket};
+
+type BoxedTween<Value, Time> = Tweener<Value, Time, Box<dyn tween::Tween<Value> + Send + Sync>>;
+
+pub struct VSScreen {
+    player1: vec2<BoxedTween<f64, f64>>,
+    player2: vec2<BoxedTween<f64, f64>>,
+}
 
 pub struct State {
     game: Option<[Game; 2]>,
     last_frame: std::time::Instant,
+    vs_screen: Option<VSScreen>,
 }
 
 static STATE: std::sync::Mutex<Option<State>> = std::sync::Mutex::new(None);
@@ -31,6 +40,7 @@ pub extern "C" fn load(_: &str) {
     *state = Some(State {
         game: None,
         last_frame: std::time::Instant::now(),
+        vs_screen: None,
     });
 }
 
@@ -47,6 +57,51 @@ pub extern "C" fn frame(
     let frame_time = state.last_frame.elapsed().as_secs_f64();
     state.last_frame = std::time::Instant::now();
 
+    context.select_font_face(
+        "Purisa",
+        cairo::FontSlant::Normal,
+        cairo::FontWeight::Normal,
+    );
+
+    if let (Some(vs_screen), Some([game1, game2])) = (&mut state.vs_screen, &state.game) {
+        let player1 = vec2(
+            vs_screen.player1.x.move_by(frame_time),
+            vs_screen.player1.y.move_by(frame_time),
+        );
+        let player2 = vec2(
+            vs_screen.player2.x.move_by(frame_time),
+            vs_screen.player2.y.move_by(frame_time),
+        );
+
+        context.set_font_size(60.0);
+        if let Ok(extents) = context.text_extents("VS") {
+            context.set_source_rgb(1.0, 1.0, 1.0);
+            context.move_to(
+                (width - extents.width()) / 2.0,
+                (height - extents.height()) / 2.0,
+            );
+            log_error!("{}"; context.show_text("VS"));
+        }
+
+        context.set_font_size(40.0);
+        context.set_source_rgb(1.0, 0.0, 0.0);
+        context.move_to(player1.x, player1.y);
+        log_error!("{}"; context.show_text(&game1.name));
+
+        context.set_source_rgb(0.0, 0.0, 1.0);
+        context.move_to(player2.x, player2.y);
+        log_error!("{}"; context.show_text(&game2.name));
+
+        if vs_screen.player1.x.is_finished()
+            && vs_screen.player1.y.is_finished()
+            && vs_screen.player2.x.is_finished()
+            && vs_screen.player2.y.is_finished()
+        {
+            state.vs_screen = None;
+        }
+        return true;
+    }
+
     match queue::get_state() {
         queue::State::Playing
             if match &state.game {
@@ -62,6 +117,50 @@ pub extern "C" fn frame(
                 .into_iter()
                 .map(|player| Game::new(GAME_SIZE, player.0, player.1))
                 .collect::<Vec<_>>();
+
+            context.set_font_size(height / 40.0);
+            if let (Ok(extents1), Ok(extents2)) = (
+                context.text_extents(&games[0].name),
+                context.text_extents(&games[1].name),
+            ) {
+                let vs_tween = |value_delta: f64, percent: f32| {
+                    value_delta * ((percent * 2.0 - 1.0).powi(7) / 2.0 + 0.5) as f64
+                };
+
+                let time = 5.0;
+
+                state.vs_screen = Some(VSScreen {
+                    player1: vec2(
+                        Tweener::new(
+                            -extents1.width(),
+                            width / 2.0,
+                            time,
+                            Box::new(vs_tween),
+                        ),
+                        Tweener::new(
+                            -extents1.height(),
+                            height,
+                            time,
+                            Box::new(vs_tween),
+                        ),
+                    ),
+                    player2: vec2(
+                        Tweener::new(
+                            width,
+                            width / 2.0 - extents2.width(),
+                            time,
+                            Box::new(vs_tween),
+                        ),
+                        Tweener::new(
+                            height,
+                            -extents2.height(),
+                            time,
+                            Box::new(vs_tween),
+                        ),
+                    ),
+                });
+            }
+
             state.game = Some(games.try_into().unwrap());
         }
         queue::State::WaitingForPlayers(_) => {

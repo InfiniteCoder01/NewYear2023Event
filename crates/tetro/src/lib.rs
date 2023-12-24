@@ -126,10 +126,10 @@ pub extern "C" fn frame(
                 text_center_offset(&context, &games[1].name),
             ) {
                 let vs_tween = |value_delta: f64, percent: f32| {
-                    value_delta * ((percent * 2.0 - 1.0).powi(7) / 2.0 + 0.5) as f64
+                    value_delta * ((percent * 2.0 - 1.0).powi(3) / 2.0 + 0.5) as f64
                 };
 
-                let time = 5.0;
+                let time = 3.0;
 
                 state.vs_screen = Some(VSScreen {
                     player1: vec2(

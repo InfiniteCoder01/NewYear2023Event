@@ -37,7 +37,7 @@ pub fn stream<F>(
     let (enc, parse, cvt, audioenc) = if virtual_mode {
         ("x264enc", "h264parse", "videoconvert", "faac")
     } else {
-        ("x264enc", "h264parse", "videoconvert", "voaacenc")
+        ("x264enc", "h264parse", "v4l2convert", "voaacenc")
     };
 
     // * Source
@@ -62,7 +62,7 @@ pub fn stream<F>(
     // * BGR fix
     let bgr_fix = ElementFactory::make("rawvideoparse")
         .property("use-sink-caps", false)
-        .property("format", gst_video::VideoFormat::Rgbx)
+        .property("format", gst_video::VideoFormat::Bgrx)
         .property("width", width as i32)
         .property("height", height as i32)
         .build()

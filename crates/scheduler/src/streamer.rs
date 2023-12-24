@@ -34,7 +34,7 @@ pub fn stream<F>(
         r#"
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
-            video/x-raw, width={width}, height={height}, format=BGRx !
+            video/x-raw, width={width}, height={height} !
             {videocvt} ! video/x-raw, format=I420 ! video_switch.
 
             input-selector name=video_switch !

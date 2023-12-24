@@ -3,7 +3,7 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-use gst::{prelude::*, Caps, ElementFactory, Fraction};
+use gst::{prelude::*, Caps, ElementFactory};
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -18,7 +18,7 @@ pub fn stream<F>(
     // let pipeline_str = format!(
     //     concat!(
     //         "videotestsrc pattern=black ! cairooverlay ! video/x-raw, width={}, height={}, format=BGRx ! ",
-    //         "capssetter capssetter replace=true caps="video/x-raw, format=(string)RGBx, ..." ! ",
+    //         "rawvideoparse use-sink-caps=false format=RGBx width={} height={} ! ",
     //         "videoconvert ! video/x-raw, format=I420 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
@@ -37,7 +37,7 @@ pub fn stream<F>(
     let (enc, parse, cvt, audioenc) = if virtual_mode {
         ("x264enc", "h264parse", "videoconvert", "faac")
     } else {
-        ("x264enc", "h264parse", "v4l2convert", "voaacenc")
+        ("x264enc", "h264parse", "videoconvert", "voaacenc")
     };
 
     // * Source
@@ -60,26 +60,11 @@ pub fn stream<F>(
         .unwrap();
 
     // * BGR fix
-    let bgr_fix = ElementFactory::make("capssetter")
-        .property("join", false)
-        .property("replace", true)
-        .property(
-            "caps",
-            gst_video::VideoCapsBuilder::new()
-                .width(width as _)
-                .height(height as _)
-                .format(gst_video::VideoFormat::Rgbx)
-                .build(),
-            // Caps::builder("video/x-raw")
-            //     .field("format", "RGBx")
-            //     .field("width", width as i32)
-            //     .field("height", height as i32)
-            //     // .field("framerate", Fraction::new(30, 1))
-            //     // .field("multiview-mode", "mono")
-            //     // .field("pixel-aspect-ratio", Fraction::new(1, 1))
-            //     // .field("interlace-mode", "progressive")
-            //     .build(),
-        )
+    let bgr_fix = ElementFactory::make("rawvideoparse")
+        .property("use-sink-caps", false)
+        .property("format", gst_video::VideoFormat::Rgbx)
+        .property("width", width as i32)
+        .property("height", height as i32)
         .build()
         .unwrap();
 

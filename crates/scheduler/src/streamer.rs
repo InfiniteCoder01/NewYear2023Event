@@ -35,7 +35,9 @@ pub fn stream<F>(
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
             video/x-raw, width={width}, height={height}, format=BGRx !
-            {videocvt} ! video/x-raw, format=I420 ! 
+            {videocvt} ! video/x-raw, format=I420 ! video_switch.
+
+            input-selector name=video_switch !
         "#
     );
     if virtual_mode {
@@ -43,7 +45,7 @@ pub fn stream<F>(
     } else {
         pipeline += &format!(
             r#"
-                x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast ! h264parse !
+                x264enc ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location={rtmp_uri}
 
                 pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.

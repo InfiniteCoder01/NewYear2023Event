@@ -52,7 +52,6 @@ pub fn stream<F>(
             "#
         );
     };
-    println!("pipeline");
 
     gst::init().unwrap();
     let pipeline = parse_launch(&pipeline)

@@ -10,7 +10,7 @@ use tween::Tweener;
 pub struct Board {
     pub size: vec2<usize>,
     pub field: BidiVec<Option<(f64, f64, f64)>>,
-    pub zone_lines: Vec<(Tweener<f64, f64, tween::CubicInOut>, bool)>,
+    pub zone_lines: Vec<Tweener<f64, f64, tween::CubicInOut>>,
 }
 
 impl Board {
@@ -141,7 +141,7 @@ impl Board {
         }
 
         context.set_source_rgb(1.0, 1.0, 1.0);
-        for (y, _) in &mut self.zone_lines {
+        for y in &mut self.zone_lines {
             context.rectangle(
                 offset.x,
                 offset.y + y.move_by(frame_time) * tile,
@@ -394,13 +394,6 @@ impl Game {
             }
         }
 
-        for (line, landed) in &mut self.board.zone_lines {
-            if line.final_value() - line.move_by(0.0) < 2.0 / tile && !*landed {
-                soloud.play(&self.zone_line_fall);
-                *landed = true;
-            }
-        }
-
         if self.timer.elapsed() >= self.move_time && self.state == State::Normal {
             self.timer = std::time::Instant::now();
             if !self.tetromino.try_move(&self.board, vec2(0, 1)) {
@@ -422,10 +415,16 @@ impl Game {
             for &y in &cleared_lines {
                 self.board.shift(Some(y), 1, || None);
                 if self.state == State::Normal {
+                    let min_move_time = Duration::from_millis(20);
+                    self.general_move_time = (self.general_move_time * 70 / 100).max(min_move_time);
+                    self.move_time = self.move_time.min(self.general_move_time);
+
                     let tl = vec2(0.0, y as f64 * tile);
                     let size = vec2(self.board.size.x as f64 * tile, tile);
                     self.particle_rect(tl, size);
                     soloud.play(&self.line_clear);
+                } else {
+                    soloud.play(&self.zone_line_fall);
                 }
             }
 
@@ -439,13 +438,10 @@ impl Game {
                 self.board
                     .shift(None, -(cleared_lines.len() as isize), || None);
                 for &line in cleared_lines.iter().rev() {
-                    self.board.zone_lines.push((
-                        Tweener::cubic_in_out(
-                            line as f64,
-                            (self.board.size.y - self.board.zone_lines.len() - 1) as f64,
-                            1.0,
-                        ),
-                        false,
+                    self.board.zone_lines.push(Tweener::cubic_in_out(
+                        line as f64,
+                        (self.board.size.y - self.board.zone_lines.len() - 1) as f64,
+                        1.0,
                     ));
                 }
             } else if self.state == State::Normal && !cleared_lines.is_empty() {
@@ -457,7 +453,7 @@ impl Game {
 
         if self.state == State::ZoneEnding {
             let mut zone_finished = true;
-            for (line, _) in &self.board.zone_lines {
+            for line in &self.board.zone_lines {
                 if !line.is_finished() {
                     zone_finished = false;
                 }
@@ -507,7 +503,7 @@ impl Game {
         message.extend_from_slice(&self.zone_max.to_le_bytes());
         message.push((self.state == self::State::Zone) as u8);
         message.extend_from_slice(&(self.board.zone_lines.len() as u32).to_le_bytes());
-        for (line, _) in &self.board.zone_lines {
+        for line in &self.board.zone_lines {
             message.extend_from_slice(&line.clone().move_by(0.0).to_le_bytes());
         }
 
@@ -543,7 +539,7 @@ impl Game {
                 self.tetromino.place(&mut self.board);
                 self.placed = true;
             }
-            self.move_time = Duration::from_millis(50);
+            self.move_time = Duration::from_millis(50).min(self.general_move_time);
         } else {
             self.move_time = self.general_move_time;
         }

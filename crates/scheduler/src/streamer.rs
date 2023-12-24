@@ -3,7 +3,11 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-use gst::{prelude::*, Caps, ElementFactory};
+use gst::{parse_launch, prelude::*, Caps, Element, ElementFactory, Pipeline};
+use std::sync::Mutex;
+
+static VIDEO_SOURCE: Mutex<Option<Element>> = Mutex::new(None);
+static VIDEO_SWITCH: Mutex<Option<Element>> = Mutex::new(None);
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -15,158 +19,47 @@ pub fn stream<F>(
 ) where
     F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {
-    // let pipeline_str = format!(
-    //     concat!(
-    //         "videotestsrc pattern=black ! cairooverlay ! video/x-raw, width={}, height={}, format=BGRx ! ",
-    //         "rawvideoparse use-sink-caps=false format=RGBx width={} height={} ! ",
-    //         "videoconvert ! video/x-raw, format=I420 ! ",
-    //         "x264enc ! h264parse ! ",
-    //         "flvmux streamable=true name=mux ! ",
-    //         "rtmp2sink location={} ",
-    //         "pulsesrc ! ",
-    //         "voaacenc bitrate=128000 ! mux."
-    //     ),
-    //     width, height, fps,
-    //     width, height, fps,
-    //     rtmp_uri
-    // );
-
-    gst::init().unwrap();
-    let pipeline = gst::Pipeline::default();
-
-    let (enc, parse, cvt, audioenc) = if virtual_mode {
-        ("x264enc", "h264parse", "videoconvert", "faac")
+    let (width, height) = size;
+    let (videocvt, audioenc) = if virtual_mode {
+        ("videoconvert", "faac")
     } else {
-        ("x264enc", "h264parse", "v4l2convert", "voaacenc")
+        (/*"v4l2convert"*/"autovideoconvert", "voaacenc")
     };
 
-    // * Source
-    let (width, height) = size;
-    let background = ElementFactory::make("videotestsrc")
-        .property_from_str("pattern", "black")
-        .build()
-        .unwrap();
-    let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
-    let source_caps_filter = ElementFactory::make("capsfilter")
-        .property(
-            "caps",
-            gst_video::VideoCapsBuilder::new()
-                .width(width as _)
-                .height(height as _)
-                .format(gst_video::VideoFormat::Bgrx)
-                .build(),
-        )
-        .build()
-        .unwrap();
+    // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
+    // demux.audio_0 ! audioconvert ! pulsesink
+    // demux.video_0 ! input-selector name=video_switch
+    // rawvideoparse use-sink-caps=false format="RGBx" width={width} height={height} !
+    let mut pipeline = format!(
+        r#"
+            videotestsrc pattern=black !
+            cairooverlay name="video_overlay" !
+            video/x-raw, width={width}, height={height}, format=BGRx !
 
-    // * BGR fix
-    let bgr_fix = ElementFactory::make("rawvideoparse")
-        .property("use-sink-caps", false)
-        .property("format", gst_video::VideoFormat::Bgrx)
-        .property("width", width as i32)
-        .property("height", height as i32)
-        .build()
-        .unwrap();
-
-    // * Convert
-    let videoconvert = ElementFactory::make(cvt).build().unwrap();
-    let youtube_caps_filter = ElementFactory::make("capsfilter")
-        .property(
-            "caps",
-            Caps::builder("video/x-raw").field("format", "I420").build(),
-        )
-        .build()
-        .unwrap();
-    let video_encoder = ElementFactory::make(enc)
-        .property("key-int-max", 30_u32)
-        .property("bitrate", video_bitrate as u32)
-        .property_from_str("speed-preset", "ultrafast")
-        .build()
-        .unwrap();
-    let video_decoder = ElementFactory::make(parse).build().unwrap();
-
-    // * Mux
-    let mux = ElementFactory::make("flvmux")
-        .property("streamable", true)
-        .build()
-        .unwrap();
-
-    // * Sink
-    let rtmp_sink = ElementFactory::make("rtmp2sink")
-        .property("location", rtmp_uri)
-        .build()
-        .unwrap();
-
-    // * Audio
-    let audio_source = ElementFactory::make("pulsesrc").build().unwrap();
-    let audio_encoder = ElementFactory::make(audioenc)
-        .property("bitrate", audio_bitrate as i32)
-        .build()
-        .unwrap();
-
-    // * Virtual mode
-    let basic_video_sink = ElementFactory::make("autovideosink").build().unwrap();
-
+            {videocvt} ! video/x-raw, format=I420 ! video_switch.
+        "#
+    );
     if virtual_mode {
-        // * Add elements
-        pipeline
-            .add_many([
-                &background,
-                &video_overlay,
-                &source_caps_filter,
-                &bgr_fix,
-                &videoconvert,
-                &basic_video_sink,
-            ])
-            .unwrap();
-
-        // * Link video
-        gst::Element::link_many([
-            &background,
-            &video_overlay,
-            &source_caps_filter,
-            &bgr_fix,
-            &videoconvert,
-            &basic_video_sink,
-        ])
-        .unwrap();
+        pipeline += r#"input-selector name=video_switch ! autovideosink"#;
     } else {
-        // * Add elements
-        pipeline
-            .add_many([
-                &background,
-                &video_overlay,
-                &source_caps_filter,
-                &bgr_fix,
-                &videoconvert,
-                &youtube_caps_filter,
-                &video_encoder,
-                &video_decoder,
-                &mux,
-                &rtmp_sink,
-                &audio_source,
-                &audio_encoder,
-            ])
-            .unwrap();
+        pipeline += &format!(
+            r#"
+                input-selector name=video_switch !
+                x264enc key-int-max=30 bitrate={video_bitrate} speed-preset="ultrafast" ! h264parse !
+                flvmux streamable=true name=mux ! rtmp2sink location={rtmp_uri}
 
-        // * Link video
-        gst::Element::link_many([
-            &background,
-            &video_overlay,
-            &source_caps_filter,
-            &bgr_fix,
-            &videoconvert,
-            &youtube_caps_filter,
-            &video_encoder,
-            &video_decoder,
-            &mux,
-            &rtmp_sink,
-        ])
+                pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.
+            "#
+        );
+    };
+
+    gst::init().unwrap();
+    let pipeline = parse_launch(&pipeline)
+        .unwrap()
+        .downcast::<Pipeline>()
         .unwrap();
 
-        // * Link audio
-        gst::Element::link_many([&audio_source, &audio_encoder, &mux]).unwrap();
-    }
+    let video_overlay = pipeline.by_name("video_overlay").unwrap();
 
     // * Draw callback
     let draw_frame = std::sync::Mutex::new(draw_frame);

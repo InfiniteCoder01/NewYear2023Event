@@ -23,7 +23,7 @@ pub fn stream<F>(
     let (videocvt, audioenc) = if virtual_mode {
         ("videoconvert", "faac")
     } else {
-        (/*"autovideoconvert"*/"v4l2convert", "voaacenc")
+        (/*"autovideoconvert"*/"vulkancolorconvert", "voaacenc")
     };
 
     // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
@@ -34,7 +34,7 @@ pub fn stream<F>(
         r#"
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
-            video/x-raw, width={width}, height={height} !
+            video/x-raw, width={width}, height={height}, format=BGRx !
             {videocvt} ! video/x-raw, format=I420 ! video_switch.
 
             input-selector name=video_switch !

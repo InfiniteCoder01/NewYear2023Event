@@ -35,9 +35,7 @@ pub fn stream<F>(
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
             video/x-raw, width={width}, height={height}, format=BGRx !
-            {videocvt} ! video/x-raw, format=I420 ! video_switch.
-
-            input-selector name=video_switch !
+            {videocvt} ! video/x-raw, format=I420 ! 
         "#
     );
     if virtual_mode {

@@ -33,6 +33,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "animate"
+version = "0.1.0"
+dependencies = [
+ "cairo-rs",
+ "futures-util",
+ "log",
+ "scheduler",
+ "soloud",
+ "tokio",
+ "warp",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"

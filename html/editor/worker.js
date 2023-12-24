@@ -35,6 +35,6 @@ self.onmessage = function (event) {
     }
 };
 
-self.onerror = function (event) {
+onerror = function (event) {
     error(event);
 }

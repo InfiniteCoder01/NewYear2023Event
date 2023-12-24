@@ -110,6 +110,8 @@
                 0.0,
                 Math.PI * 2.0,
             );
+            context.stroke();
+            context.beginPath();
             context.arc(
                 zonePos[0],
                 zonePos[1],
@@ -119,7 +121,7 @@
             );
             context.stroke();
 
-            context.lineWidth = 5;
+            context.lineWidth = 6;
             context.beginPath();
             context.arc(
                 zonePos[0],

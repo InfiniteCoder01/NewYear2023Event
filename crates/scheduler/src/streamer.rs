@@ -3,7 +3,7 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-use gst::{prelude::*, Caps, ElementFactory};
+use gst::{prelude::*, Caps, ElementFactory, Fraction};
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -17,7 +17,8 @@ pub fn stream<F>(
 {
     // let pipeline_str = format!(
     //     concat!(
-    //         "videotestsrc pattern=black ! cairooverlay ! width={}, height={}, format=BGRx ! ",
+    //         "videotestsrc pattern=black ! cairooverlay ! video/x-raw, width={}, height={}, format=BGRx ! ",
+    //         "capssetter capssetter replace=true caps="video/x-raw, format=(string)RGBx, ..." ! ",
     //         "videoconvert ! video/x-raw, format=I420 ! ",
     //         "x264enc ! h264parse ! ",
     //         "flvmux streamable=true name=mux ! ",
@@ -45,7 +46,8 @@ pub fn stream<F>(
         .property_from_str("pattern", "black")
         .build()
         .unwrap();
-    let background_caps_filter = ElementFactory::make("capsfilter")
+    let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
+    let source_caps_filter = ElementFactory::make("capsfilter")
         .property(
             "caps",
             gst_video::VideoCapsBuilder::new()
@@ -56,22 +58,27 @@ pub fn stream<F>(
         )
         .build()
         .unwrap();
-    let video_overlay = ElementFactory::make("cairooverlay").build().unwrap();
-    let channel_swap_fixer = ElementFactory::make("rawvideoparse")
-        .property("use-sink-caps", false)
-        .property("width", width as i32)
-        .property("height", height as i32)
-        .property("format", gst_video::VideoFormat::Rgbx)
-        .build()
-        .unwrap();
-    let source_caps_filter = ElementFactory::make("capsfilter")
+
+    // * BGR fix
+    let bgr_fix = ElementFactory::make("capssetter")
+        .property("join", false)
+        .property("replace", true)
         .property(
             "caps",
             gst_video::VideoCapsBuilder::new()
                 .width(width as _)
                 .height(height as _)
-                .format(gst_video::VideoFormat::Bgrx)
+                .format(gst_video::VideoFormat::Rgbx)
                 .build(),
+            // Caps::builder("video/x-raw")
+            //     .field("format", "RGBx")
+            //     .field("width", width as i32)
+            //     .field("height", height as i32)
+            //     // .field("framerate", Fraction::new(30, 1))
+            //     // .field("multiview-mode", "mono")
+            //     // .field("pixel-aspect-ratio", Fraction::new(1, 1))
+            //     // .field("interlace-mode", "progressive")
+            //     .build(),
         )
         .build()
         .unwrap();
@@ -120,9 +127,9 @@ pub fn stream<F>(
         pipeline
             .add_many([
                 &background,
-                &background_caps_filter,
                 &video_overlay,
                 &source_caps_filter,
+                &bgr_fix,
                 &videoconvert,
                 &basic_video_sink,
             ])
@@ -131,9 +138,9 @@ pub fn stream<F>(
         // * Link video
         gst::Element::link_many([
             &background,
-            &background_caps_filter,
             &video_overlay,
             &source_caps_filter,
+            &bgr_fix,
             &videoconvert,
             &basic_video_sink,
         ])
@@ -143,10 +150,9 @@ pub fn stream<F>(
         pipeline
             .add_many([
                 &background,
-                &background_caps_filter,
                 &video_overlay,
-                &channel_swap_fixer,
                 &source_caps_filter,
+                &bgr_fix,
                 &videoconvert,
                 &youtube_caps_filter,
                 &video_encoder,
@@ -161,10 +167,9 @@ pub fn stream<F>(
         // * Link video
         gst::Element::link_many([
             &background,
-            &background_caps_filter,
             &video_overlay,
-            &channel_swap_fixer,
             &source_caps_filter,
+            &bgr_fix,
             &videoconvert,
             &youtube_caps_filter,
             &video_encoder,

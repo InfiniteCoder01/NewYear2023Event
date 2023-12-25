@@ -8,21 +8,25 @@ use gst::{parse_bin_from_description, parse_launch, prelude::*, Bin, Element, Pi
 
 pub struct BackgroundController {
     pipeline: Pipeline,
-    file_pipeline: Bin,
+    file_src: Element,
     video_switch: Element,
 }
 
 impl BackgroundController {
     pub fn set_file_source(&self, location: &str) {
-        self.file_pipeline
-            .by_name("file_src")
-            .unwrap()
-            .set_property("location", location);
+        // self.file_pipeline
+        //     .by_name("file_src")
+        //     .unwrap()
+        //     .set_property("location", location);
 
-        log_error!("Failed to add file to pipeline: {}!"; self.pipeline.add(&self.file_pipeline));
-        log_error!("Failed to link file to pipeline: {}!"; self.file_pipeline.link(&self.video_switch));
-        self.video_switch
-            .set_property("active-pad", self.video_switch.sink_pads().last().unwrap());
+        // self.pipeline
+        //     .by_name("dummy")
+        //     .unwrap()
+        //     .unlink(&self.video_switch);
+        // log_error!("Failed to add file to pipeline: {}!"; self.pipeline.add(&self.file_pipeline));
+        // log_error!("Failed to link file to pipeline: {}!"; self.file_pipeline.src_pads().last().unwrap().link(self.video_switch.sink_pads().last().unwrap()));
+        // self.video_switch
+        //     .set_property("active-pad", self.video_switch.sink_pads().last().unwrap());
     }
 
     pub fn disable_background_video(&self) {
@@ -46,8 +50,13 @@ pub fn stream<F>(
     let audioenc = if virtual_mode { "faac" } else { "voaacenc" };
 
     let mut pipeline = format!(
+        // file_demux. ! audioconvert ! audioresample ! pulsesink
+        // location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4"
         r#"
             videotestsrc pattern=black ! video_switch.sink_0
+
+            filesrc name=file_src !
+            decodebin name=file_demux ! videoconvert ! video_switch.sink_1
 
             input-selector name=video_switch !
             cairooverlay name=video_overlay !
@@ -67,15 +76,6 @@ pub fn stream<F>(
         );
     };
 
-    let file_pipeline = &format!(
-        r#"
-            filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" name=file_src !
-            decodebin name=file_demux ! videoconvert ! capsfilter caps="video/x-raw, width={width}, height={height}, format=RGB16"
-
-            file_demux. ! audioconvert ! audioresample ! pulsesink
-        "#
-    );
-
     gst::init().unwrap();
     let pipeline = parse_launch(&pipeline)
         .unwrap()
@@ -85,7 +85,7 @@ pub fn stream<F>(
     // * Video Switch
     let background = BackgroundController {
         pipeline: pipeline.clone(),
-        file_pipeline: parse_bin_from_description(file_pipeline, true).unwrap(),
+        file_src: pipeline.by_name("file_src").unwrap(),
         video_switch: pipeline.by_name("video_switch").unwrap(),
     };
 
@@ -94,6 +94,7 @@ pub fn stream<F>(
     background
         .video_switch
         .set_property("active-pad", background.video_switch.static_pad("sink_0"));
+    background.file_src.set_locked_state(true);
 
     // * Draw callback
     let video_overlay = pipeline.by_name("video_overlay").unwrap();

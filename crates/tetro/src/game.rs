@@ -103,15 +103,15 @@ impl Board {
     ) {
         let ____________________board____________________ = std::time::Instant::now();
         let ____________________grid____________________ = std::time::Instant::now();
-        context.set_source_rgb(0.0, 0.2, 1.0);
-        context.set_line_width(4.0);
-        context.rectangle(
-            offset.x,
-            offset.y,
-            self.size.x as f64 * tile,
-            self.size.y as f64 * tile,
-        );
-        log_error!("{}"; context.stroke());
+        // context.set_source_rgb(0.0, 0.2, 1.0);
+        // context.set_line_width(4.0);
+        // context.rectangle(
+        //     offset.x,
+        //     offset.y,
+        //     self.size.x as f64 * tile,
+        //     self.size.y as f64 * tile,
+        // );
+        // log_error!("{}"; context.stroke());
 
         // context.set_source_rgb(0.0, 0.1, 0.5);
         // context.set_line_width(1.0);

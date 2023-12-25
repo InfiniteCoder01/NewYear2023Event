@@ -124,6 +124,7 @@ fn main() {
         128000,
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {
+            let frame_start = std::time::Instant::now();
             if schedule_timer.elapsed().as_secs_f32() > 0.5 {
                 schedule_timer = std::time::Instant::now();
                 schedule = Schedule::load().unwrap_or_default();
@@ -195,6 +196,7 @@ fn main() {
                     }
                 }
             }
+            println!("Frame time: {}ms", frame_start.elapsed().as_millis());
         },
         std::env::args().collect::<Vec<_>>()[1..] != ["Pi"],
     );

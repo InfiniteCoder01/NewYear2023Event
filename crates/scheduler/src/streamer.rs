@@ -20,11 +20,7 @@ pub fn stream<F>(
     F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
 {
     let (width, height) = size;
-    let (videocvt, audioenc) = if virtual_mode {
-        ("videoconvert", "faac")
-    } else {
-        (/*"v4l2convert"*/"videoconvert", "voaacenc")
-    };
+    let audioenc = if virtual_mode { "faac" } else { "voaacenc" };
 
     let mut pipeline = format!(
         // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
@@ -45,7 +41,6 @@ pub fn stream<F>(
         pipeline += "glimagesink";
     } else {
         pipeline += &format!(
-            // x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast
             r#"
                 v4l2h264enc ! video/x-h264,level=(string)3.1 ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location="{rtmp_uri}"

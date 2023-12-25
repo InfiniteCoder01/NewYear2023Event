@@ -30,9 +30,9 @@ impl BackgroundController {
     }
 
     pub fn disable_background_video(&self) {
-        self.video_switch
-            .set_property("active-pad", self.video_switch.static_pad("sink_0"));
-        log_error!("Failed to remove file from pipeline: {}!"; self.pipeline.remove(&self.file_pipeline));
+        // self.video_switch
+        //     .set_property("active-pad", self.video_switch.static_pad("sink_0"));
+        // log_error!("Failed to remove file from pipeline: {}!"; self.pipeline.remove(&self.file_pipeline));
     }
 }
 

@@ -11,8 +11,8 @@ static VIDEO_SWITCH: Mutex<Option<Element>> = Mutex::new(None);
 
 pub fn stream<F>(
     size: (usize, usize),
-    video_bitrate: usize,
     audio_bitrate: usize,
+    h264_level: &str,
     rtmp_uri: &str,
     draw_frame: F,
     virtual_mode: bool,
@@ -42,7 +42,7 @@ pub fn stream<F>(
     } else {
         pipeline += &format!(
             r#"
-                v4l2h264enc ! video/x-h264,level=(string)3.1 ! h264parse !
+                v4l2h264enc ! video/x-h264, level=(string){h264_level} ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location="{rtmp_uri}"
 
                 pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.

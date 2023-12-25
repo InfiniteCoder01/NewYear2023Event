@@ -120,11 +120,10 @@ fn main() {
     streamer::stream(
         // (1920, 1080),
         (1280, 720),
-        7000, // https://support.google.com/youtube/answer/1722171?hl=en#zippy=%2Cvideo-codec-h%2Cframe-rate%2Cbitrate
         128000,
+        "3.1",
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
         move |context, width, height| {
-            let frame_start = std::time::Instant::now();
             if schedule_timer.elapsed().as_secs_f32() > 0.5 {
                 schedule_timer = std::time::Instant::now();
                 schedule = Schedule::load().unwrap_or_default();
@@ -166,7 +165,6 @@ fn main() {
 
             if let Some(loaded_plugin) = &mut plugin {
                 let next = schedule.get_next(&loaded_plugin.path);
-                let plugin_start = std::time::Instant::now();
                 if !unsafe {
                     (loaded_plugin.plugin.frame)(
                         &soloud,
@@ -178,7 +176,6 @@ fn main() {
                 } {
                     plugin = next.and_then(LoadedPlugin::load);
                 }
-                println!("Plugin time: {}ms", plugin_start.elapsed().as_millis());
             } else {
                 context.set_source_rgb(1.0, 1.0, 1.0);
                 context.select_font_face(
@@ -198,7 +195,6 @@ fn main() {
                     }
                 }
             }
-            println!("Frame time: {}ms", frame_start.elapsed().as_millis());
         },
         std::env::args().collect::<Vec<_>>()[1..] != ["Pi"],
     );

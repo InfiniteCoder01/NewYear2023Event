@@ -57,6 +57,7 @@ pub extern "C" fn frame(
     height: f64,
     _time_left: Duration,
 ) -> bool {
+    let _____________________frame_start________________ = std::time::Instant::now();
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     let frame_time = state.last_frame.elapsed().as_secs_f64();
@@ -161,7 +162,10 @@ pub extern "C" fn frame(
         _ => (),
     }
 
+    println!("Queueing time: {}ms", _____________________frame_start________________.elapsed().as_millis());
+
     if let Some([game1, game2]) = &mut state.game {
+        let ___________________rendering_start_______________ = std::time::Instant::now();
         let tile = (height / (game1.board.size.y.max(game2.board.size.y) as f64 + 1.5))
             .min(width / (game1.board.size.x.max(game2.board.size.x) as f64 + 3.0) / 2.0);
 
@@ -174,6 +178,7 @@ pub extern "C" fn frame(
 
         game1.draw(&context, tile, offset1, frame_time);
         game2.draw(&context, tile, offset2, frame_time);
+        println!("Render time: {}ms", ___________________rendering_start_______________.elapsed().as_millis());
 
         if let queue::State::Finished(time) = queue::get_state() {
             if time.elapsed() > std::time::Duration::from_secs(10) {
@@ -208,6 +213,7 @@ pub extern "C" fn frame(
             }
         }
     }
+    println!("Frame time: {}ms", _____________________frame_start________________.elapsed().as_millis());
 
     true
 }
@@ -232,46 +238,14 @@ fn socket(
     mut tx: futures_util::stream::SplitSink<WebSocket, Message>,
     mut rx: futures_util::stream::SplitStream<WebSocket>,
 ) {
-    use futures_util::{SinkExt, StreamExt};
-
-    let reciever_uid = uid.clone();
-    let reciever = tokio::spawn(async move {
-        let uid = reciever_uid;
-        while let Some(Ok(message)) = rx.next().await {
-            if let Ok(command) = message.to_str() {
-                let mut state = STATE.lock().unwrap();
-                let state = state.as_mut().unwrap();
-
-                if let Some(game) = state
-                    .game
-                    .as_mut()
-                    .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
-                {
-                    match command {
-                        "CCW" => game.try_turn(true),
-                        "CW" => game.try_turn(false),
-                        "Left" => game.try_move(-1),
-                        "Right" => game.try_move(1),
-                        "Zone" => game.zone(),
-                        "FastFall" => game.speedup(true),
-                        "SlowFall" => game.speedup(false),
-                        _ => (),
-                    };
-                } else {
-                    return;
-                }
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        }
-    });
-
     tokio::spawn(async move {
+        use futures_util::{FutureExt, SinkExt, StreamExt};
+
         macro_rules! try_send {
-                ($message: expr) => {
-                    try_log!("Send error: {}"; tx.send($message).await)
-                };
-            }
+        ($message: expr) => {
+            try_log!("Send error: {}"; tx.send($message).await)
+        };
+    }
 
         loop {
             let (message, terminate) = {
@@ -297,18 +271,126 @@ fn socket(
                         (Message::binary(game.build_message()), false)
                     }
                 } else {
-                    reciever.abort();
                     break;
                 }
             };
 
             try_send!(message);
+
             if terminate {
                 break;
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+            while let Some(message) = rx.next().now_or_never() {
+                if let Some(Ok(message)) = message {
+                    if let Ok(command) = message.to_str() {
+                        let mut state = STATE.lock().unwrap();
+                        let state = state.as_mut().unwrap();
+
+                        if let Some(game) = state
+                            .game
+                            .as_mut()
+                            .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
+                        {
+                            match command {
+                                "CCW" => game.try_turn(true),
+                                "CW" => game.try_turn(false),
+                                "Left" => game.try_move(-1),
+                                "Right" => game.try_move(1),
+                                "Zone" => game.zone(),
+                                "FastFall" => game.speedup(true),
+                                "SlowFall" => game.speedup(false),
+                                _ => (),
+                            };
+                        } else {
+                            return;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
         }
+
         log::info!("{name} left.");
     });
+    // let reciever_uid = uid.clone();
+    // let reciever = tokio::spawn(async move {
+    //     let uid = reciever_uid;
+    //     while let Some(Ok(message)) = rx.next().await {
+    //         if let Ok(command) = message.to_str() {
+    //             let mut state = STATE.lock().unwrap();
+    //             let state = state.as_mut().unwrap();
+
+    //             if let Some(game) = state
+    //                 .game
+    //                 .as_mut()
+    //                 .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
+    //             {
+    //                 match command {
+    //                     "CCW" => game.try_turn(true),
+    //                     "CW" => game.try_turn(false),
+    //                     "Left" => game.try_move(-1),
+    //                     "Right" => game.try_move(1),
+    //                     "Zone" => game.zone(),
+    //                     "FastFall" => game.speedup(true),
+    //                     "SlowFall" => game.speedup(false),
+    //                     _ => (),
+    //                 };
+    //             } else {
+    //                 return;
+    //             }
+    //         }
+
+    //         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    //     }
+    // });
+
+    // tokio::spawn(async move {
+    //     macro_rules! try_send {
+    //             ($message: expr) => {
+    //                 try_log!("Send error: {}"; tx.send($message).await)
+    //             };
+    //         }
+
+    //     loop {
+    //         let (message, terminate) = {
+    //             let state = STATE.lock().unwrap();
+    //             let state = state.as_ref().unwrap();
+
+    //             if let Some(game) = state
+    //                 .game
+    //                 .as_ref()
+    //                 .and_then(|games| games.iter().take(2).find(|game| game.uid == uid))
+    //             {
+    //                 if game.state == game::State::GameOver {
+    //                     (Message::text(format!("You lost :( But don't be disappointed! You've played well and got {} christmas decorations!", game.points)), true)
+    //                 } else if game.state == game::State::Won {
+    //                     (
+    //                         Message::text(format!(
+    //                             "Celebrate, because you won! You've got {} christmas decorations!",
+    //                             game.points
+    //                         )),
+    //                         true,
+    //                     )
+    //                 } else {
+    //                     (Message::binary(game.build_message()), false)
+    //                 }
+    //             } else {
+    //                 reciever.abort();
+    //                 break;
+    //             }
+    //         };
+
+    //         try_send!(message);
+    //         if terminate {
+    //             break;
+    //         }
+
+    //         tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+    //     }
+    //     log::info!("{name} left.");
+    // });
 }

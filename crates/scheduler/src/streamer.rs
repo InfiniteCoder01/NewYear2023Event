@@ -47,7 +47,7 @@ pub fn stream<F>(
         pipeline += &format!(
             // x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast
             r#"
-                v4l2h264enc ! h264parse !
+                v4l2h264enc ! video/x-h264,level=(string)3.1 ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location="{rtmp_uri}"
 
                 pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.

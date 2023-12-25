@@ -166,6 +166,7 @@ fn main() {
 
             if let Some(loaded_plugin) = &mut plugin {
                 let next = schedule.get_next(&loaded_plugin.path);
+                let plugin_start = std::time::Instant::now();
                 if !unsafe {
                     (loaded_plugin.plugin.frame)(
                         &soloud,
@@ -177,6 +178,7 @@ fn main() {
                 } {
                     plugin = next.and_then(LoadedPlugin::load);
                 }
+                println!("Plugin time: {}ms", plugin_start.elapsed().as_millis());
             } else {
                 context.set_source_rgb(1.0, 1.0, 1.0);
                 context.select_font_face(

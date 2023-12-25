@@ -295,9 +295,12 @@ impl Game {
         offset: vec2<f64>,
         frame_time: f64,
     ) {
+        let ____________________draw_frame____________________ = std::time::Instant::now();
         let offset = offset + vec2(0.0, tile * 1.5);
-
+        let ____________________draw_board____________________ = std::time::Instant::now();
         self.board.draw(context, tile, offset, frame_time);
+        println!("Rendering board took {}ms", ____________________draw_board____________________.elapsed().as_millis());
+        let ____________________draw_tetromino____________________ = std::time::Instant::now();
         if self.state == State::GameOver {
             self.zone_meter -= self.zone_meter * 0.1;
         } else if self.state == State::Won {
@@ -308,13 +311,17 @@ impl Game {
             shadow.drop(&self.board);
             shadow.draw_shadow(context, tile, offset);
         }
+        println!("Rendering tetromino took {}ms", ____________________draw_tetromino____________________.elapsed().as_millis());
 
+        let ____________________draw_particles____________________ = std::time::Instant::now();
         for particle in &mut self.particles {
             particle.frame(context, offset, frame_time);
         }
         self.particles
             .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
+        println!("Rendering particles took {}ms", ____________________draw_particles____________________.elapsed().as_millis());
 
+        let ____________________draw_zone_meter____________________ = std::time::Instant::now();
         let zone_pos = offset + vec2(-2.1, 1.2) * tile;
         context.set_source_rgb(0.0, 0.2, 1.0);
         context.set_line_width(1.0);
@@ -345,7 +352,9 @@ impl Game {
                 - std::f64::consts::PI / 2.0,
         );
         log_error!("{}"; context.stroke());
+        println!("Rendering zone meter took {}ms", ____________________draw_zone_meter____________________.elapsed().as_millis());
 
+        let ____________________draw_text____________________ = std::time::Instant::now();
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.set_font_size(tile);
 
@@ -376,6 +385,8 @@ impl Game {
             context.move_to(zone_pos.x - text_offset.x, zone_pos.y + tile * 2.5);
             context.show_text(&points).ok();
         }
+        println!("Rendering text took {}ms", ____________________draw_text____________________.elapsed().as_millis());
+        println!("Rendering game took {}ms", ____________________draw_frame____________________.elapsed().as_millis());
     }
 
     pub fn update(

@@ -39,6 +39,7 @@ dependencies = [
  "cairo-rs",
  "futures-util",
  "log",
+ "points",
  "scheduler",
  "soloud",
  "tokio",

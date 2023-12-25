@@ -3,11 +3,34 @@ pub extern crate gstreamer_audio as gst_audio;
 pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
-use gst::{parse_launch, prelude::*, Element, Pipeline};
-use std::sync::Mutex;
+use super::*;
+use gst::{parse_bin_from_description, parse_launch, prelude::*, Bin, Element, Pipeline};
 
-static VIDEO_SOURCE: Mutex<Option<Element>> = Mutex::new(None);
-static VIDEO_SWITCH: Mutex<Option<Element>> = Mutex::new(None);
+pub struct BackgroundController {
+    pipeline: Pipeline,
+    file_pipeline: Bin,
+    video_switch: Element,
+}
+
+impl BackgroundController {
+    pub fn set_file_source(&self, location: &str) {
+        self.file_pipeline
+            .by_name("file_src")
+            .unwrap()
+            .set_property("location", location);
+
+        log_error!("Failed to add file to pipeline: {}!"; self.pipeline.add(&self.file_pipeline));
+        log_error!("Failed to link file to pipeline: {}!"; self.file_pipeline.link(&self.video_switch));
+        self.video_switch
+            .set_property("active-pad", self.video_switch.sink_pads().last().unwrap());
+    }
+
+    pub fn disable_background_video(&self) {
+        self.video_switch
+            .set_property("active-pad", self.video_switch.static_pad("sink_0"));
+        log_error!("Failed to remove file from pipeline: {}!"; self.pipeline.remove(&self.file_pipeline));
+    }
+}
 
 pub fn stream<F>(
     size: (usize, usize),
@@ -17,24 +40,18 @@ pub fn stream<F>(
     draw_frame: F,
     virtual_mode: bool,
 ) where
-    F: FnMut(cairo::Context, f64, f64) + Send + Sync + 'static,
+    F: FnMut(&BackgroundController, cairo::Context, f64, f64) + Send + Sync + 'static,
 {
     let (width, height) = size;
     let audioenc = if virtual_mode { "faac" } else { "voaacenc" };
 
     let mut pipeline = format!(
-        // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
-        // demux.audio_0 ! decodebin ! audioconvert ! audioresample ! pulsesink
-        // demux.video_0 ! decodebin ! videoscale ! video_switch.
-        // {videocvt} ! video/x-raw, format=I420 !
         r#"
-
-            videotestsrc pattern=black !
-            cairooverlay name="video_overlay" !
-            video/x-raw, width={width}, height={height}, format=RGB16 !
-            video_switch.
+            videotestsrc pattern=black ! video_switch.sink_0
 
             input-selector name=video_switch !
+            cairooverlay name=video_overlay !
+            video/x-raw, width={width}, height={height}, format=RGB16 !
         "#
     );
     if virtual_mode {
@@ -50,26 +67,46 @@ pub fn stream<F>(
         );
     };
 
+    let file_pipeline = &format!(
+        r#"
+            filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" name=file_src !
+            decodebin name=file_demux ! videoconvert ! capsfilter caps="video/x-raw, width={width}, height={height}, format=RGB16"
+
+            file_demux. ! audioconvert ! audioresample ! pulsesink
+        "#
+    );
+
     gst::init().unwrap();
     let pipeline = parse_launch(&pipeline)
         .unwrap()
         .downcast::<Pipeline>()
         .unwrap();
 
-    let video_overlay = pipeline.by_name("video_overlay").unwrap();
+    // * Video Switch
+    let background = BackgroundController {
+        pipeline: pipeline.clone(),
+        file_pipeline: parse_bin_from_description(file_pipeline, true).unwrap(),
+        video_switch: pipeline.by_name("video_switch").unwrap(),
+    };
+
+    log_error!("Failed to start the flow: {}!"; pipeline.set_state(gst::State::Playing));
+
+    background
+        .video_switch
+        .set_property("active-pad", background.video_switch.static_pad("sink_0"));
 
     // * Draw callback
+    let video_overlay = pipeline.by_name("video_overlay").unwrap();
     let draw_frame = std::sync::Mutex::new(draw_frame);
     video_overlay.connect("draw", false, move |args| {
         draw_frame.lock().unwrap()(
+            &background,
             args[1].get::<cairo::Context>().unwrap(),
             width as _,
             height as _,
         );
         None
     });
-
-    let result = pipeline.set_state(gst::State::Playing);
 
     for msg in pipeline.bus().unwrap().iter_timed(gst::ClockTime::NONE) {
         use gst::MessageView;
@@ -109,8 +146,6 @@ pub fn stream<F>(
             _ => (),
         }
     }
-
-    result.unwrap();
 
     pipeline.set_state(gst::State::Null).unwrap();
 }

@@ -2,10 +2,19 @@ use batbox_la::*;
 pub use chrono::DateTime;
 pub use chrono::Duration;
 use libloading::Library;
+use streamer::BackgroundController;
+
+pub mod streamer;
 
 #[allow(improper_ctypes_definitions)]
-pub type PluginFrame =
-    unsafe extern "C" fn(&soloud::Soloud, cairo::Context, f64, f64, Duration) -> bool;
+pub type PluginFrame = unsafe extern "C" fn(
+    &soloud::Soloud,
+    &BackgroundController,
+    cairo::Context,
+    f64,
+    f64,
+    Duration,
+) -> bool;
 
 #[allow(improper_ctypes_definitions)]
 pub type PluginCommand = unsafe extern "C" fn(&str);
@@ -17,7 +26,7 @@ pub struct Plugin<'a> {
 }
 
 impl Plugin<'_> {
-    pub fn load(path: &str, args: &str) -> Option<Self> {
+    pub fn load(background: &BackgroundController, path: &str, args: &str) -> Option<Self> {
         unsafe {
             let library = try_log!(
                 "Failed to load plugin {:?}: {}!",
@@ -32,7 +41,7 @@ impl Plugin<'_> {
             );
             let load = try_log!(
                 "Invalid plugin {}!";
-                library.get::<unsafe extern "C" fn(&str)>(b"load")
+                library.get::<unsafe extern "C" fn(&BackgroundController, &str)>(b"load")
                 => None
             );
             let frame = try_log!(
@@ -43,7 +52,7 @@ impl Plugin<'_> {
             let command = (*(&library as *const Library))
                 .get::<PluginCommand>(b"command")
                 .ok();
-            load(args);
+            load(background, args);
             Some(Self {
                 library,
                 frame,
@@ -112,6 +121,35 @@ where
     runtime.as_ref().unwrap().spawn(future)
 }
 
+// * Minimal server
+pub fn make_minimal_server<Leaderboard>(
+    leaderboard: &Leaderboard,
+) -> impl warp::Filter<Extract = impl warp::reply::Reply, Error = warp::reject::Rejection> + Clone + '_
+where
+    Leaderboard: Fn(Option<String>) -> warp::reply::Json + Sync,
+{
+    use warp::Filter;
+
+    let routes = warp::path::end().map(|| {
+        warp::reply::html(
+            r#"<head><meta http-equiv="refresh" content="0; url=/controller" /></head>"#,
+        )
+    });
+
+    let routes = routes.or(warp::path("account").and(warp::fs::dir("./html/account/")));
+    routes.or(warp::path("leaderboard").and(
+        warp::path::path("api")
+            .and(
+                warp::path::param::<String>()
+                    .and(warp::path::end())
+                    .map(|uid| leaderboard(Some(uid)))
+                    .or(warp::path::end().map(|| leaderboard(None))),
+            )
+            .or(warp::fs::dir("./html/leaderboard/")),
+    ))
+}
+
+// * Dev server
 pub fn make_dev_server<'a, Socket, FutureSocket, Leaderboard>(
     name: &'a str,
     socket: Socket,
@@ -125,24 +163,9 @@ where
     use std::fs::read_to_string;
     use warp::Filter;
 
-    let routes = warp::path::end().map(|| {
-        warp::reply::html(
-            r#"<head><meta http-equiv="refresh" content="0; url=/controller" /></head>"#,
-        )
-    });
-    let routes = routes.or(warp::path("account").and(warp::fs::dir("./html/account/")));
-    let routes = routes.or(warp::path("editor").and(warp::fs::dir("./html/editor/")));
-    let routes = routes.or(warp::path("leaderboard").and(
-        warp::path::path("api")
-            .and(
-                warp::path::param::<String>()
-                    .and(warp::path::end())
-                    .map(|uid| leaderboard(Some(uid)))
-                    .or(warp::path::end().map(|| leaderboard(None))),
-            )
-            .or(warp::fs::dir("./html/leaderboard/")),
-    ));
+    let routes = make_minimal_server(leaderboard);
 
+    let routes = routes.or(warp::path("editor").and(warp::fs::dir("./html/editor/")));
     let routes = routes.or(warp::path("controller").and(
         warp::path::end()
             .map(move || {

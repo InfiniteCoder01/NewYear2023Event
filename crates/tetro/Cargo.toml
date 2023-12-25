@@ -7,21 +7,21 @@ edition = "2021"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-log = { version = "0.4.20", features = ["std"] }
+log = "0.4.20"
 
 scheduler = { path = "../scheduler" }
 points = { path = "../points" }
 queue = { path = "../queue" }
-rand = "0.8.5"
+rand = { version = "0.8.5", default-features = false }
 
 batbox-la = "0.16.0"
-tween = "2.0.2"
+tween = { version = "2.0.2", default-features = false }
 bidivec = "0.1.0"
 
-cairo-rs = "0.18.3"
-soloud = "1.0.5"
+cairo-rs = { version = "0.18.3", default-features = false }
+soloud = { version = "1.0.5", default-features = false }
 
-warp = "0.3.6"
-futures-util = "0.3.29"
+warp = { version = "0.3.6", default-features = false, features = ["websocket"] }
+futures-util = { version = "0.3.29", default-features = false }
 tokio = "1.34.0"
 rs-firebase-admin-sdk = "1.2.2"

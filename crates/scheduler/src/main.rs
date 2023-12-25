@@ -2,8 +2,6 @@ use chrono::{Local, TimeZone};
 use scheduler::*;
 use serde::Deserialize;
 
-mod streamer;
-
 #[derive(Debug, Deserialize)]
 pub struct Private {
     key: String,
@@ -102,10 +100,13 @@ fn main() {
     }
 
     impl LoadedPlugin<'_> {
-        fn load(plugin: &ScheduledPlugin) -> Option<Self> {
+        fn load(
+            background: &streamer::BackgroundController,
+            plugin: &ScheduledPlugin,
+        ) -> Option<Self> {
             Some(Self {
                 path: plugin.path.clone(),
-                plugin: Plugin::load(&plugin.path, &plugin.args)?,
+                plugin: Plugin::load(background, &plugin.path, &plugin.args)?,
             })
         }
     }
@@ -123,7 +124,7 @@ fn main() {
         128000,
         "3.1",
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),
-        move |context, width, height| {
+        move |background, context, width, height| {
             if schedule_timer.elapsed().as_secs_f32() > 0.5 {
                 schedule_timer = std::time::Instant::now();
                 schedule = Schedule::load().unwrap_or_default();
@@ -138,7 +139,7 @@ fn main() {
                             if let Some(scheduled) = schedule.get(&loaded.path) {
                                 if !scheduled.path.is_empty() {
                                     log::info!("Reloading plugin {}", scheduled.path);
-                                    plugin = LoadedPlugin::load(scheduled);
+                                    plugin = LoadedPlugin::load(background, scheduled);
                                 }
                             }
                         }
@@ -168,13 +169,14 @@ fn main() {
                 if !unsafe {
                     (loaded_plugin.plugin.frame)(
                         &soloud,
+                        background,
                         context,
                         width,
                         height,
                         next.map_or(Duration::zero(), |next| next.timestamp - Local::now()),
                     )
                 } {
-                    plugin = next.and_then(LoadedPlugin::load);
+                    plugin = next.and_then(|next| LoadedPlugin::load(background, next));
                 }
             } else {
                 context.set_source_rgb(1.0, 1.0, 1.0);
@@ -191,7 +193,7 @@ fn main() {
                 if let Some(scheduled) = schedule.get_scheduled() {
                     if !scheduled.path.is_empty() {
                         log::info!("Loading plugin {}", scheduled.path);
-                        plugin = LoadedPlugin::load(scheduled);
+                        plugin = LoadedPlugin::load(background, scheduled);
                     }
                 }
             }

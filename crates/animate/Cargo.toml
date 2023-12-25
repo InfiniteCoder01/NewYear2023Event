@@ -10,6 +10,7 @@ crate-type = ["rlib", "cdylib"]
 log = { version = "0.4.20", features = ["std"] }
 
 scheduler = { path = "../scheduler" }
+points = { path = "../points" }
 
 cairo-rs = "0.18.3"
 soloud = "1.0.5"

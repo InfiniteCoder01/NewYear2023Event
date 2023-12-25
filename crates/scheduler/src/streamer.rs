@@ -26,26 +26,28 @@ pub fn stream<F>(
         (/*"v4l2convert"*/"videoconvert", "voaacenc")
     };
 
-    // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
-    // demux.audio_0 ! audioconvert ! pulsesink
-    // demux.video_0 ! input-selector name=video_switch
-    // rawvideoparse use-sink-caps=false format="RGBx" width={width} height={height} !
     let mut pipeline = format!(
+        // filesrc location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4" ! qtdemux name=demux
+        // demux.audio_0 ! decodebin ! audioconvert ! audioresample ! pulsesink
+        // demux.video_0 ! decodebin ! videoscale ! video_switch.
+        // {videocvt} ! video/x-raw, format=I420 !
         r#"
+
             videotestsrc pattern=black !
             cairooverlay name="video_overlay" !
             video/x-raw, width={width}, height={height}, format=BGRx !
-            {videocvt} ! video/x-raw, format=I420 ! video_switch.
+            video_switch.
 
             input-selector name=video_switch !
         "#
     );
     if virtual_mode {
-        pipeline += "autovideosink";
+        pipeline += "glimagesink";
     } else {
         pipeline += &format!(
+            // x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast
             r#"
-                x264enc key-int-max=30 bitrate={video_bitrate} speed-preset=ultrafast ! h264parse !
+                v4l2h264enc ! h264parse !
                 flvmux streamable=true name=mux ! rtmp2sink location="{rtmp_uri}"
 
                 pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.

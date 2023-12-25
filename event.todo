@@ -1,5 +1,5 @@
 Important:
-    [ ] BGR bug fix @started(23-12-24 11:00)
+    ✔ BGR bug fix @started(23-12-24 11:00) @done(23-12-24 21:43) @lasted(10h43m8s)
     ✔ Queueing system: @started(23-12-23 11:11) @done(23-12-23 17:56) @lasted(6h45m14s)
         ✔ GameOver/Win screen @started(23-12-23 17:56) @done(23-12-23 21:52) @lasted(3h56m30s)
         ✔ Waiting for players screen @done(23-12-23 21:52)

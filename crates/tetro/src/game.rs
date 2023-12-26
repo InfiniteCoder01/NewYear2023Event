@@ -103,29 +103,29 @@ impl Board {
     ) {
         let ____________________board____________________ = std::time::Instant::now();
         let ____________________grid____________________ = std::time::Instant::now();
-        // context.set_source_rgb(0.0, 0.2, 1.0);
-        // context.set_line_width(4.0);
-        // context.rectangle(
-        //     offset.x,
-        //     offset.y,
-        //     self.size.x as f64 * tile,
-        //     self.size.y as f64 * tile,
-        // );
-        // log_error!("{}"; context.stroke());
+        context.set_source_rgb(0.0, 0.2, 1.0);
+        context.set_line_width(4.0);
+        context.rectangle(
+            offset.x,
+            offset.y,
+            self.size.x as f64 * tile,
+            self.size.y as f64 * tile,
+        );
+        log_error!("{}"; context.stroke());
 
-        // context.set_source_rgb(0.0, 0.1, 0.5);
-        // context.set_line_width(1.0);
-        // for y in 0..self.size.y {
-        //     for x in 0..self.size.x {
-        //         context.rectangle(
-        //             offset.x + x as f64 * tile,
-        //             offset.y + y as f64 * tile,
-        //             tile,
-        //             tile,
-        //         );
-        //     }
-        // }
-        // log_error!("{}"; context.stroke());
+        context.set_source_rgb(0.0, 0.1, 0.5);
+        context.set_line_width(1.0);
+        for y in 0..self.size.y {
+            for x in 0..self.size.x {
+                context.rectangle(
+                    offset.x + x as f64 * tile,
+                    offset.y + y as f64 * tile,
+                    tile,
+                    tile,
+                );
+            }
+        }
+        log_error!("{}"; context.stroke());
         println!(
             "Rendering grid took {}ms",
             ____________________grid____________________
@@ -160,7 +160,7 @@ impl Board {
         for y in &mut self.zone_lines {
             context.rectangle(
                 offset.x,
-                offset.y + y.move_by(frame_time) * tile,
+                offset.y + y.move_by(frame_time).floor() * tile,
                 self.size.x as f64 * tile,
                 tile + 2.0,
             );
@@ -218,7 +218,12 @@ impl Particle {
             context.set_source_rgba(rga, rga, 1.0, rga);
             context.translate(center.x, center.y);
             context.rotate(self.angle);
-            context.rectangle(-size * 0.5, -size * 0.5, size, size);
+            context.rectangle(
+                -(size * 0.5).floor(),
+                -(size * 0.5).floor(),
+                size.floor(),
+                size.floor(),
+            );
             log_error!("{}"; context.fill());
             context.identity_matrix();
         }
@@ -342,36 +347,36 @@ impl Game {
         self.particles
             .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
 
-        let zone_pos = offset + vec2(-2.1, 1.2) * tile;
-        // context.set_source_rgb(0.0, 0.2, 1.0);
-        // context.set_line_width(1.0);
-        // context.arc(
-        //     zone_pos.x,
-        //     zone_pos.y,
-        //     tile + 3.5,
-        //     0.0,
-        //     std::f64::consts::PI * 2.0,
-        // );
-        // log_error!("{}"; context.stroke());
-        // context.arc(
-        //     zone_pos.x,
-        //     zone_pos.y,
-        //     tile - 3.5,
-        //     0.0,
-        //     std::f64::consts::PI * 2.0,
-        // );
-        // log_error!("{}"; context.stroke());
+        let zone_pos = offset + (vec2(-2.1, 1.2) * tile).map(f64::floor);
+        context.set_source_rgb(0.0, 0.2, 1.0);
+        context.set_line_width(1.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile + 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        log_error!("{}"; context.stroke());
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile - 3.5,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        log_error!("{}"; context.stroke());
 
-        // context.set_line_width(6.0);
-        // context.arc(
-        //     zone_pos.x,
-        //     zone_pos.y,
-        //     tile,
-        //     -std::f64::consts::PI / 2.0,
-        //     self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
-        //         - std::f64::consts::PI / 2.0,
-        // );
-        // log_error!("{}"; context.stroke());
+        context.set_line_width(6.0);
+        context.arc(
+            zone_pos.x,
+            zone_pos.y,
+            tile,
+            -std::f64::consts::PI / 2.0,
+            self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
+                - std::f64::consts::PI / 2.0,
+        );
+        log_error!("{}"; context.stroke());
 
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.set_font_size(tile);

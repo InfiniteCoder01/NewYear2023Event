@@ -164,14 +164,15 @@ pub extern "C" fn frame(
 
     if let Some([game1, game2]) = &mut state.game {
         let tile = (height / (game1.board.size.y.max(game2.board.size.y) as f64 + 1.5))
-            .min(width / (game1.board.size.x.max(game2.board.size.x) as f64 + 3.0) / 2.0);
+            .min(width / (game1.board.size.x.max(game2.board.size.x) as f64 + 3.0) / 2.0)
+            .floor();
 
         let board1_size = game1.board.size.map(|x| x as f64) * tile + vec2(3.0, 1.5) * tile;
         let board2_size = game2.board.size.map(|x| x as f64) * tile + vec2(3.0, 1.5) * tile;
         let padding = (width - (board1_size.x + board2_size.y)) / 3.0;
 
-        let offset1 = vec2(padding + tile * 3.0, (height - board1_size.y) / 2.0);
-        let offset2 = vec2(width / 2.0 + offset1.x, (height - board2_size.y) / 2.0);
+        let offset1 = vec2(padding + tile * 3.0, (height - board1_size.y) / 2.0).map(f64::floor);
+        let offset2 = vec2(width / 2.0 + offset1.x, (height - board2_size.y) / 2.0).map(f64::floor);
 
         game1.draw(&context, tile, offset1, frame_time);
         game2.draw(&context, tile, offset2, frame_time);

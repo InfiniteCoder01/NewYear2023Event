@@ -247,8 +247,8 @@ pub fn color_to_u32(color: Color) -> u32 {
 pub fn text_center_offset(context: &cairo::Context, text: &str) -> Option<vec2<f64>> {
     context.text_extents(text).ok().map(|extents| {
         vec2(
-            extents.width() / 2.0 + extents.x_bearing() * 2.0,
-            extents.height() / 2.0 + extents.y_bearing() * 2.0,
+            extents.width() / 2.0 + extents.x_bearing(),
+            extents.height() / 2.0 + extents.y_bearing(),
         )
     })
 }

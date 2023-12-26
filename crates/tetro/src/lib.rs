@@ -3,6 +3,7 @@ pub mod tetromino;
 
 use crate::game::Game;
 use batbox_la::*;
+use points::make_bottom_banner;
 use scheduler::*;
 use tween::Tweener;
 use warp::filters::ws::{Message, WebSocket};
@@ -68,6 +69,8 @@ pub extern "C" fn frame(
         cairo::FontSlant::Normal,
         cairo::FontWeight::Normal,
     );
+
+    let height = height - make_bottom_banner(&context, width, height, time_left);
 
     if let (Some(vs_screen), Some([game1, game2])) = (&mut state.vs_screen, &state.game) {
         let player1 = vec2(

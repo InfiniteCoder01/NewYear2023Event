@@ -1,3 +1,4 @@
+#![feature(stmt_expr_attributes)]
 use batbox_la::*;
 pub use chrono::DateTime;
 pub use chrono::Duration;
@@ -250,6 +251,27 @@ pub fn text_center_offset(context: &cairo::Context, text: &str) -> Option<vec2<f
             extents.height() / 2.0 + extents.y_bearing(),
         )
     })
+}
+
+pub fn rounded_rectangle(
+    context: &cairo::Context,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    radius: f64,
+) {
+    let degrees = std::f64::consts::PI / 180.0;
+
+    context.new_sub_path();
+    #[rustfmt::skip]
+    {
+        context.arc(x + width - radius, y + radius, radius, -90.0 * degrees, 0.0 * degrees);
+        context.arc(x + width - radius, y + height - radius, radius, 0.0 * degrees, 90.0 * degrees);
+        context.arc(x + radius, y + height - radius, radius, 90.0 * degrees, 180.0 * degrees);
+        context.arc(x + radius, y + radius, radius, 180.0 * degrees, 270.0 * degrees);
+    }
+    context.close_path()
 }
 
 pub fn load_wav(path: impl AsRef<std::path::Path>) -> soloud::audio::Wav {

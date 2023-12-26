@@ -137,6 +137,49 @@ pub fn make_leaderboard_server() -> &'static impl Fn(Option<String>) -> warp::re
     }
 }
 
-pub fn make_bottom_banner(context: cairo::Context, width: f64, height: f64, time_left: Duration) {
-    //
+pub fn make_bottom_banner(
+    context: &cairo::Context,
+    width: f64,
+    height: f64,
+    time_left: Duration,
+) -> f64 {
+    let padding = 10.0;
+    let radius = 10.0;
+    let banner_height = (height / 20.0).floor() + padding * 2.0 + radius * 2.0;
+    let y = height - banner_height;
+
+    rounded_rectangle(
+        context,
+        padding,
+        y + padding,
+        width - padding * 2.0,
+        banner_height - padding * 2.0,
+        radius,
+    );
+
+    context.set_source_rgb(0.25, 0.6, 0.66);
+    log_error!("{}"; context.stroke());
+
+    let message = {
+        use hhmmss::Hhmmss;
+
+        let days = time_left.num_days();
+        let hhmmss = time_left - Duration::days(days);
+        format!(
+            "Time left to the next event: {}",
+            if days > 0 {
+                format!("{} days and {}", days, hhmmss.hhmmss())
+            } else {
+                hhmmss.hhmmss()
+            }
+        )
+    };
+    if let Some(offset) = text_center_offset(context, &message) {
+        context.set_source_rgb(1.0, 1.0, 1.0);
+        context.set_font_size(banner_height - padding * 2.0 - radius * 2.0);
+        context.move_to(padding + radius, y + banner_height / 2.0 - offset.y);
+        log_error!("{}"; context.show_text(&message));
+    }
+
+    banner_height
 }

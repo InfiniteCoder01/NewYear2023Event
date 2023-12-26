@@ -72,10 +72,10 @@ pub fn stream<F>(
     } else {
         pipeline += &format!(
             r#"
-                v4l2h264enc ! video/x-h264, level=(string){h264_level} ! h264parse !
+                v4l2h264enc ! video/x-h264, level=(string){h264_level} ! h264parse ! queue !
                 flvmux streamable=true name=mux ! rtmp2sink location="{rtmp_uri}"
 
-                pulsesrc ! {audioenc} bitrate={audio_bitrate} ! mux.
+                pulsesrc ! {audioenc} bitrate={audio_bitrate} ! queue ! mux.
             "#
         );
     };

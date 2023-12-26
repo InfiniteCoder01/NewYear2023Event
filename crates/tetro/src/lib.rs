@@ -179,6 +179,7 @@ pub extern "C" fn frame(
         if let queue::State::Finished(time) = queue::get_state() {
             if time.elapsed() > std::time::Duration::from_secs(5) {
                 if time_left < Duration::zero() {
+                    kill_async_server();
                     return false;
                 }
                 state.game = None;

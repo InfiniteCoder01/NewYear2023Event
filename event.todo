@@ -6,7 +6,7 @@ Important:
         ✔ VS Screen before start @started(23-12-24 12:51) @done(23-12-24 14:30) @lasted(1h39m17s)
     [ ] Fix lags @started(23-12-25 11:52)
     [ ] Banners
-    [ ] Fix "error creating server listener: Address already in use (os error 98)"
+    ✔ Fix "error creating server listener: Address already in use (os error 98)" @done(23-12-26 10:21)
     ✔ Animation player @started(23-12-24 17:05) @done(23-12-25 21:49) @lasted(1d4h44m7s)
     ✔ Sonds for tetris @started(23-12-24 14:00) @done(23-12-24 16:41) @lasted(2h41m31s)
     [ ] r/place

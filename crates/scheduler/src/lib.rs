@@ -227,6 +227,15 @@ pub fn restart_async_server<F>(
     });
 }
 
+pub fn kill_async_server() {
+    let mut runtime = RUNTIME.lock().unwrap();
+    if let Some(runtime) = runtime.take() {
+        runtime.shutdown_background();
+    } else {
+        log::error!("Failed to terminate async server: server is not running");
+    }
+}
+
 // * ----------------------------------- Rendering ---------------------------------- * //
 pub type Color = (f64, f64, f64);
 

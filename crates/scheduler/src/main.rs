@@ -117,7 +117,9 @@ fn main() {
     let stdin_channel = std::sync::Mutex::new(spawn_stdin_channel());
     streamer::stream(
         // (1920, 1080),
-        (1280, 720),
+        // (1280, 720),
+        (854, 480),
+        // (640, 360),
         128000,
         "3.1",
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),

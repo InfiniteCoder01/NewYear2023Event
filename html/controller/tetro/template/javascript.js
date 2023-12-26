@@ -1,7 +1,6 @@
 // This is a simple implementation, showcasing the API. Improve it, or write your own!
 // You can see all methods provided here: https://github.com/InfiniteCoder01/NewYear2024Event/blob/master/html/controller/tetro/api.js
-// socket.send will send your move to the server. Note, that server will only allow
-// moves to go 100 times per second. But you can send more, they will just be delayed
+// socket.send will send your move to the server.
 // Server API:
 // CW - Turn tetromino Clockwise
 // CCW - Turn tetromino Counter Clockwise
@@ -122,6 +121,7 @@ function callback(game) {
     if (game.zoneMeter >= game.zoneMax * 0.4) {
         socket.send("Zone");
     }
+    socket.send("Ping"); // Refresh the board
 }
 
 print("Connecting...");

@@ -23,6 +23,7 @@ function connect(onMessage) {
         }
         processMessage(msg, onMessage);
     };
+    socket.onopen = () => socket.send("Ping");
 }
 
 self.onmessage = function (event) {

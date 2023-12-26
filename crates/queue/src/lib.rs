@@ -78,9 +78,6 @@ where
                         *queue = Queue::new();
                     }
                     State::WaitingForPlayers(time) => {
-                        if queue.current_game.is_empty() {
-                            queue.state = State::WaitingForPlayers(std::time::Instant::now())
-                        }
                         if !queue.queue.is_empty() {
                             let players_to_complete = required_players - queue.current_game.len();
                             let players_to_provide = players_to_complete.min(queue.queue.len());
@@ -91,7 +88,9 @@ where
                                 queue.state = State::Playing;
                             }
                         }
-                        if Some(time.elapsed()) >= wait_time {
+                        if queue.current_game.is_empty() {
+                            queue.state = State::WaitingForPlayers(std::time::Instant::now())
+                        } else if Some(time.elapsed()) >= wait_time {
                             queue.state = State::Playing;
                         }
                     }

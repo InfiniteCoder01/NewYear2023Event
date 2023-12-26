@@ -238,7 +238,7 @@ fn socket(
     mut rx: futures_util::stream::SplitStream<WebSocket>,
 ) {
     tokio::spawn(async move {
-        use futures_util::{FutureExt, SinkExt, StreamExt};
+        use futures_util::{SinkExt, StreamExt};
 
         macro_rules! try_send {
             ($message: expr) => {
@@ -246,68 +246,68 @@ fn socket(
             };
         }
 
-        loop {
-            let (message, terminate) = {
-                let state = STATE.lock().unwrap();
-                let state = state.as_ref().unwrap();
+        while let Some(Ok(message)) = rx.next().await {
+            let pinged = if let Ok(command) = message.to_str() {
+                let mut state = STATE.lock().unwrap();
+                let state = state.as_mut().unwrap();
 
                 if let Some(game) = state
                     .game
-                    .as_ref()
-                    .and_then(|games| games.iter().take(2).find(|game| game.uid == uid))
+                    .as_mut()
+                    .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
                 {
-                    if game.state == game::State::GameOver {
-                        (Message::text(format!("You lost :( But don't be disappointed! You've played well and got {} christmas decorations!", game.points)), true)
-                    } else if game.state == game::State::Won {
-                        (
-                            Message::text(format!(
-                                "Celebrate, because you won! You've got {} christmas decorations!",
-                                game.points
-                            )),
-                            true,
-                        )
+                    if command == "Ping" {
+                        true
                     } else {
-                        (Message::binary(game.build_message()), false)
-                    }
-                } else {
-                    break;
-                }
-            };
-
-            try_send!(message);
-
-            if terminate {
-                break;
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(30)).await;
-
-            while let Some(message) = rx.next().now_or_never() {
-                if let Some(Ok(message)) = message {
-                    if let Ok(command) = message.to_str() {
-                        let mut state = STATE.lock().unwrap();
-                        let state = state.as_mut().unwrap();
-
-                        if let Some(game) = state
-                            .game
-                            .as_mut()
-                            .and_then(|games| games.iter_mut().take(2).find(|game| game.uid == uid))
-                        {
-                            match command {
-                                "CCW" => game.try_turn(true),
-                                "CW" => game.try_turn(false),
-                                "Left" => game.try_move(-1),
-                                "Right" => game.try_move(1),
-                                "Zone" => game.zone(),
-                                "FastFall" => game.speedup(true),
-                                "SlowFall" => game.speedup(false),
-                                _ => (),
-                            };
-                        } else {
-                            return;
+                        match command {
+                            "CCW" => game.try_turn(true),
+                            "CW" => game.try_turn(false),
+                            "Left" => game.try_move(-1),
+                            "Right" => game.try_move(1),
+                            "Zone" => game.zone(),
+                            "FastFall" => game.speedup(true),
+                            "SlowFall" => game.speedup(false),
+                            _ => (),
                         }
+                        false
                     }
                 } else {
+                    return;
+                }
+            } else {
+                false
+            };
+            if pinged {
+                let (message, terminate) = {
+                    let state = STATE.lock().unwrap();
+                    let state = state.as_ref().unwrap();
+
+                    if let Some(game) = state
+                        .game
+                        .as_ref()
+                        .and_then(|games| games.iter().take(2).find(|game| game.uid == uid))
+                    {
+                        if game.state == game::State::GameOver {
+                            (Message::text(format!("You lost :( But don't be disappointed! You've played well and got {} christmas decorations!", game.points)), true)
+                        } else if game.state == game::State::Won {
+                            (
+                                    Message::text(format!(
+                                        "Celebrate, because you won! You've got {} christmas decorations!",
+                                        game.points
+                                    )),
+                                    true,
+                                )
+                        } else {
+                            (Message::binary(game.build_message()), false)
+                        }
+                    } else {
+                        break;
+                    }
+                };
+
+                try_send!(message);
+
+                if terminate {
                     break;
                 }
             }

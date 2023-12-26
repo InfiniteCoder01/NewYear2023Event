@@ -116,6 +116,7 @@ pub struct LeaderboardItem {
 pub enum BannerMessage {
     TimeLeft,
     CurrentLeader,
+    TryYourself,
     TelegramAd,
 }
 
@@ -208,7 +209,8 @@ pub fn make_bottom_banner(
             state.banner_switch_time = std::time::Instant::now();
             state.banner_message = match state.banner_message {
                 BannerMessage::TimeLeft => BannerMessage::CurrentLeader,
-                BannerMessage::CurrentLeader => BannerMessage::TelegramAd,
+                BannerMessage::CurrentLeader => BannerMessage::TryYourself,
+                BannerMessage::TryYourself => BannerMessage::TelegramAd,
                 BannerMessage::TelegramAd => BannerMessage::TimeLeft,
             }
         }
@@ -230,6 +232,7 @@ pub fn make_bottom_banner(
             )
         }
         BannerMessage::CurrentLeader => format!("Current leader: {}", state.leaderboard[0].1),
+        BannerMessage::TryYourself => "Try yourself at event.infinitecoder.org (Link in description)".to_owned(),
         BannerMessage::TelegramAd => {
             "Follow me on Telegram: https://t.me/InfiniteCoder02".to_owned()
         }
@@ -238,7 +241,10 @@ pub fn make_bottom_banner(
     if let Some(offset) = text_center_offset(context, &message) {
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.set_font_size(banner_height - padding * 2.0 - radius * 2.0);
-        context.move_to(padding + radius, y + (banner_height / 2.0).floor() - offset.y);
+        context.move_to(
+            padding + radius,
+            y + (banner_height / 2.0).floor() - offset.y,
+        );
         log_error!("{}"; context.show_text(&message));
     }
 

@@ -144,7 +144,7 @@ impl Board {
         for y in &mut self.zone_lines {
             context.rectangle(
                 offset.x,
-                offset.y + y.move_by(frame_time).floor() * tile,
+                offset.y + (y.move_by(frame_time) * tile).floor(),
                 self.size.x as f64 * tile,
                 tile + 2.0,
             );

@@ -158,7 +158,7 @@
             socket = new WebSocket(
                 `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/${apiName}/${account.uid}`
             );
-            setInterval(() => socket.send("Ping"), 30);
+            socket.onopen = () => setInterval(() => socket.send("Ping"), 30);
             socket.onmessage = msg => {
                 if (typeof msg.data === "string") {
                     if (msg.data.includes("won")) {

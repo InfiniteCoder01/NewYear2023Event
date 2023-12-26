@@ -241,10 +241,10 @@ fn socket(
         use futures_util::{FutureExt, SinkExt, StreamExt};
 
         macro_rules! try_send {
-        ($message: expr) => {
-            try_log!("Send error: {}"; tx.send($message).await)
-        };
-    }
+            ($message: expr) => {
+                try_log!("Send error: {}"; tx.send($message).await)
+            };
+        }
 
         loop {
             let (message, terminate) = {
@@ -280,7 +280,7 @@ fn socket(
                 break;
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(30)).await;
 
             while let Some(message) = rx.next().now_or_never() {
                 if let Some(Ok(message)) = message {

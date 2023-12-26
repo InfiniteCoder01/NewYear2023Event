@@ -48,7 +48,11 @@ pub fn stream<F>(
     F: FnMut(&BackgroundController, cairo::Context, f64, f64) + Send + Sync + 'static,
 {
     let (width, height) = size;
-    let audioenc = if virtual_mode { "faac" } else { "voaacenc" };
+    let (videoconvert, audioenc) = if virtual_mode {
+        ("videoconvert", "faac")
+    } else {
+        ("v4l2convert", "voaacenc")
+    };
 
     let mut pipeline = format!(
         // file_demux. ! audioconvert ! audioresample ! pulsesink
@@ -59,7 +63,7 @@ pub fn stream<F>(
             bin (name=file_bin
                 file_demux. ! audioconvert ! audioresample ! pulsesink
 
-                filesrc name=file_src ! decodebin name=file_demux ! videoconvert
+                filesrc name=file_src ! decodebin name=file_demux ! {videoconvert}
             ) ! video_switch.sink_1
 
             input-selector name=video_switch !

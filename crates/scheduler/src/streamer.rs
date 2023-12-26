@@ -4,35 +4,36 @@ pub extern crate gstreamer_base as gst_base;
 pub extern crate gstreamer_video as gst_video;
 
 use super::*;
-use gst::{parse_bin_from_description, parse_launch, prelude::*, Bin, Element, Pipeline};
+use gst::{parse_launch, prelude::*, Element, Pipeline};
 
+#[derive(Clone, Debug)]
 pub struct BackgroundController {
     pipeline: Pipeline,
+    file_bin: Element,
     file_src: Element,
     video_switch: Element,
 }
 
 impl BackgroundController {
     pub fn set_file_source(&self, location: &str) {
-        // self.file_pipeline
-        //     .by_name("file_src")
-        //     .unwrap()
-        //     .set_property("location", location);
-
-        // self.pipeline
-        //     .by_name("dummy")
-        //     .unwrap()
-        //     .unlink(&self.video_switch);
-        // log_error!("Failed to add file to pipeline: {}!"; self.pipeline.add(&self.file_pipeline));
-        // log_error!("Failed to link file to pipeline: {}!"; self.file_pipeline.src_pads().last().unwrap().link(self.video_switch.sink_pads().last().unwrap()));
-        // self.video_switch
-        //     .set_property("active-pad", self.video_switch.sink_pads().last().unwrap());
+        self.file_src.set_property("location", location);
+        self.pipeline.set_state(gst::State::Ready).unwrap();
+        self.file_bin.set_locked_state(false);
+        self.video_switch.set_property(
+            "active-pad",
+            &self.video_switch.static_pad("sink_1").unwrap(),
+        );
+        self.pipeline.set_state(gst::State::Playing).unwrap();
     }
 
     pub fn disable_background_video(&self) {
-        // self.video_switch
-        //     .set_property("active-pad", self.video_switch.static_pad("sink_0"));
-        // log_error!("Failed to remove file from pipeline: {}!"; self.pipeline.remove(&self.file_pipeline));
+        self.pipeline.set_state(gst::State::Ready).unwrap();
+        self.file_bin.set_locked_state(true);
+        self.video_switch.set_property(
+            "active-pad",
+            &self.video_switch.static_pad("sink_0").unwrap(),
+        );
+        self.pipeline.set_state(gst::State::Playing).unwrap();
     }
 }
 
@@ -55,12 +56,15 @@ pub fn stream<F>(
         r#"
             videotestsrc pattern=black ! video_switch.sink_0
 
-            filesrc name=file_src !
-            decodebin name=file_demux ! videoconvert ! video_switch.sink_1
+            bin (name=file_bin
+                file_demux. ! audioconvert ! audioresample ! pulsesink
+
+                filesrc name=file_src ! decodebin name=file_demux ! videoconvert
+            ) ! video_switch.sink_1
 
             input-selector name=video_switch !
             cairooverlay name=video_overlay !
-            video/x-raw, width={width}, height={height}, format=RGB16 !
+            video/x-raw, width={width}, height={height}, format=RGB16, framerate=30/1 !
         "#
     );
     if virtual_mode {
@@ -85,16 +89,17 @@ pub fn stream<F>(
     // * Video Switch
     let background = BackgroundController {
         pipeline: pipeline.clone(),
+        file_bin: pipeline.by_name("file_bin").unwrap(),
         file_src: pipeline.by_name("file_src").unwrap(),
         video_switch: pipeline.by_name("video_switch").unwrap(),
     };
 
+    background.file_bin.set_locked_state(true);
     log_error!("Failed to start the flow: {}!"; pipeline.set_state(gst::State::Playing));
 
     background
         .video_switch
         .set_property("active-pad", background.video_switch.static_pad("sink_0"));
-    background.file_src.set_locked_state(true);
 
     // * Draw callback
     let video_overlay = pipeline.by_name("video_overlay").unwrap();

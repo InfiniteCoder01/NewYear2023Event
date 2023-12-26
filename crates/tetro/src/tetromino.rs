@@ -80,6 +80,7 @@ impl Tetromino {
     pub fn draw_shadow(&self, context: &cairo::Context, tile: f64, offset: vec2<f64>) {
         let padding = 3.0;
         context.set_source_rgb(self.color.0, self.color.1, self.color.2);
+        context.set_line_width(3.0);
         for block in self.blocks() {
             let pos = block.map(f64::from) * tile + offset + vec2::splat(padding);
             context.rectangle(pos.x, pos.y, tile - padding * 2.0, tile - padding * 2.0);

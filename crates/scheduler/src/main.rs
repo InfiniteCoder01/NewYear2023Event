@@ -100,13 +100,10 @@ fn main() {
     }
 
     impl LoadedPlugin<'_> {
-        fn load(
-            background: &streamer::BackgroundController,
-            plugin: &ScheduledPlugin,
-        ) -> Option<Self> {
+        fn load(plugin: &ScheduledPlugin) -> Option<Self> {
             Some(Self {
                 path: plugin.path.clone(),
-                plugin: Plugin::load(background, &plugin.path, &plugin.args)?,
+                plugin: Plugin::load(&plugin.path, &plugin.args)?,
             })
         }
     }
@@ -139,7 +136,7 @@ fn main() {
                             if let Some(scheduled) = schedule.get(&loaded.path) {
                                 if !scheduled.path.is_empty() {
                                     log::info!("Reloading plugin {}", scheduled.path);
-                                    plugin = LoadedPlugin::load(background, scheduled);
+                                    plugin = LoadedPlugin::load(scheduled);
                                 }
                             }
                         }
@@ -176,7 +173,13 @@ fn main() {
                         next.map_or(Duration::zero(), |next| next.timestamp - Local::now()),
                     )
                 } {
-                    plugin = next.and_then(|next| LoadedPlugin::load(background, next));
+                    plugin = next.and_then(|next| {
+                        if next.path.is_empty() {
+                            None
+                        } else {
+                            LoadedPlugin::load(next)
+                        }
+                    });
                 }
             } else {
                 context.set_source_rgb(1.0, 1.0, 1.0);
@@ -193,7 +196,7 @@ fn main() {
                 if let Some(scheduled) = schedule.get_scheduled() {
                     if !scheduled.path.is_empty() {
                         log::info!("Loading plugin {}", scheduled.path);
-                        plugin = LoadedPlugin::load(background, scheduled);
+                        plugin = LoadedPlugin::load(scheduled);
                     }
                 }
             }

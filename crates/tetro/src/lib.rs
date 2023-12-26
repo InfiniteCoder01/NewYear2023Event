@@ -27,7 +27,7 @@ const GAME_SIZE: vec2<usize> = vec2(10, 20);
 
 #[no_mangle]
 #[allow(improper_ctypes_definitions)]
-pub extern "C" fn load(_: &streamer::BackgroundController, _: &str) {
+pub extern "C" fn load(_: &str) {
     init_logger();
     restart_async_server(async {
         let routes = make_dev_server(

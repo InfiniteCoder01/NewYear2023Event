@@ -26,7 +26,7 @@ pub struct Plugin<'a> {
 }
 
 impl Plugin<'_> {
-    pub fn load(background: &BackgroundController, path: &str, args: &str) -> Option<Self> {
+    pub fn load(path: &str, args: &str) -> Option<Self> {
         unsafe {
             let library = try_log!(
                 "Failed to load plugin {:?}: {}!",
@@ -41,7 +41,7 @@ impl Plugin<'_> {
             );
             let load = try_log!(
                 "Invalid plugin {}!";
-                library.get::<unsafe extern "C" fn(&BackgroundController, &str)>(b"load")
+                library.get::<unsafe extern "C" fn(&str)>(b"load")
                 => None
             );
             let frame = try_log!(
@@ -52,7 +52,7 @@ impl Plugin<'_> {
             let command = (*(&library as *const Library))
                 .get::<PluginCommand>(b"command")
                 .ok();
-            load(background, args);
+            load(args);
             Some(Self {
                 library,
                 frame,

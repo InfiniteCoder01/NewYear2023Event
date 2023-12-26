@@ -123,9 +123,9 @@ impl Board {
         //             tile,
         //             tile,
         //         );
-        //         log_error!("{}"; context.stroke());
         //     }
         // }
+        // log_error!("{}"; context.stroke());
         println!(
             "Rendering grid took {}ms",
             ____________________grid____________________
@@ -343,35 +343,35 @@ impl Game {
             .retain(|particle| particle.size.clone().move_by(0.0) > 0.0);
 
         let zone_pos = offset + vec2(-2.1, 1.2) * tile;
-        context.set_source_rgb(0.0, 0.2, 1.0);
-        context.set_line_width(1.0);
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile + 3.5,
-            0.0,
-            std::f64::consts::PI * 2.0,
-        );
-        log_error!("{}"; context.stroke());
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile - 3.5,
-            0.0,
-            std::f64::consts::PI * 2.0,
-        );
-        log_error!("{}"; context.stroke());
+        // context.set_source_rgb(0.0, 0.2, 1.0);
+        // context.set_line_width(1.0);
+        // context.arc(
+        //     zone_pos.x,
+        //     zone_pos.y,
+        //     tile + 3.5,
+        //     0.0,
+        //     std::f64::consts::PI * 2.0,
+        // );
+        // log_error!("{}"; context.stroke());
+        // context.arc(
+        //     zone_pos.x,
+        //     zone_pos.y,
+        //     tile - 3.5,
+        //     0.0,
+        //     std::f64::consts::PI * 2.0,
+        // );
+        // log_error!("{}"; context.stroke());
 
-        context.set_line_width(6.0);
-        context.arc(
-            zone_pos.x,
-            zone_pos.y,
-            tile,
-            -std::f64::consts::PI / 2.0,
-            self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
-                - std::f64::consts::PI / 2.0,
-        );
-        log_error!("{}"; context.stroke());
+        // context.set_line_width(6.0);
+        // context.arc(
+        //     zone_pos.x,
+        //     zone_pos.y,
+        //     tile,
+        //     -std::f64::consts::PI / 2.0,
+        //     self.zone_meter / self.zone_max * std::f64::consts::PI * 2.0
+        //         - std::f64::consts::PI / 2.0,
+        // );
+        // log_error!("{}"; context.stroke());
 
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.set_font_size(tile);

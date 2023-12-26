@@ -101,8 +101,6 @@ impl Board {
         offset: vec2<f64>,
         frame_time: f64,
     ) {
-        let ____________________board____________________ = std::time::Instant::now();
-        let ____________________grid____________________ = std::time::Instant::now();
         context.set_source_rgb(0.0, 0.2, 1.0);
         context.set_line_width(4.0);
         context.rectangle(
@@ -126,14 +124,7 @@ impl Board {
             }
         }
         log_error!("{}"; context.stroke());
-        println!(
-            "Rendering grid took {}ms",
-            ____________________grid____________________
-                .elapsed()
-                .as_millis()
-        );
 
-        let ____________________blocks____________________ = std::time::Instant::now();
         for y in 0..self.size.y {
             for x in 0..self.size.x {
                 if let Some(block) = self.get(vec2(x, y)) {
@@ -148,14 +139,7 @@ impl Board {
                 }
             }
         }
-        println!(
-            "Rendering blocks took {}ms",
-            ____________________blocks____________________
-                .elapsed()
-                .as_millis()
-        );
 
-        let ____________________zone_lines____________________ = std::time::Instant::now();
         context.set_source_rgb(1.0, 1.0, 1.0);
         for y in &mut self.zone_lines {
             context.rectangle(
@@ -166,18 +150,6 @@ impl Board {
             );
             log_error!("{}"; context.fill());
         }
-        println!(
-            "Rendering zone lines took {}ms",
-            ____________________zone_lines____________________
-                .elapsed()
-                .as_millis()
-        );
-        println!(
-            "Rendering board took {}ms",
-            ____________________board____________________
-                .elapsed()
-                .as_millis()
-        );
     }
 }
 

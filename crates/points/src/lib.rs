@@ -136,3 +136,7 @@ pub fn make_leaderboard_server() -> &'static impl Fn(Option<String>) -> warp::re
         warp::reply::json(&leaderboard)
     }
 }
+
+pub fn make_bottom_banner(context: cairo::Context, width: f64, height: f64, time_left: Duration) {
+    //
+}

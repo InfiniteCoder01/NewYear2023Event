@@ -15,3 +15,5 @@ Cargo.lock
 
 private.toml
 firebase-private.json
+
+schedule.txt

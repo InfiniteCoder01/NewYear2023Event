@@ -118,8 +118,8 @@ fn main() {
     streamer::stream(
         // (1920, 1080),
         // (1280, 720),
-        (854, 480),
-        // (640, 360),
+        // (854, 480),
+        (640, 360),
         128000,
         "3.1",
         &format!("rtmp://a.rtmp.youtube.com/live2/{}", private.key),

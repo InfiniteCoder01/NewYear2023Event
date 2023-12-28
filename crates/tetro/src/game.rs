@@ -272,12 +272,6 @@ impl Game {
 
     pub fn add_points(&mut self, amount: u64) {
         self.points += amount;
-        if self.uid != "AI" {
-            let uid = self.uid.clone();
-            spawn_in_server_runtime(async move {
-                points::give(&uid, amount).await;
-            });
-        }
     }
 
     pub fn lines_cleared_points(lines: usize) -> u64 {
@@ -465,15 +459,15 @@ impl Game {
             if zone_finished {
                 soloud.play(&self.zone_finish);
                 self.state = State::Normal;
+                let zone_lines = self.board.zone_lines.len();
                 if let Some(opponent) = opponent {
                     opponent
                         .board
-                        .garbage(((self.board.zone_lines.len() / 4) as f32).powf(1.5) as _);
+                        .garbage(((zone_lines / 4) as f32).powf(1.5) as _);
                     // if self.board.zone_lines.len() >= 8 {
                     //     opponent.tetromino = opponent.tetromino.clone().scale(2);
                     // }
                 }
-                let zone_lines = self.board.zone_lines.len();
                 {
                     let tl = vec2(
                         0.0,
@@ -551,16 +545,25 @@ impl Game {
 
     pub fn game_over(&mut self, tile: f64) {
         self.state = State::GameOver;
-        self.explode(tile);
+        self.endgame(tile);
     }
 
     pub fn won(&mut self, tile: f64) {
         self.add_points(self.points);
         self.state = State::Won;
-        self.explode(tile);
+        self.endgame(tile);
     }
 
-    pub fn explode(&mut self, tile: f64) {
+    pub fn endgame(&mut self, tile: f64) {
+        if self.uid != "AI" {
+            let uid = self.uid.clone();
+            let points = self.points;
+            spawn_in_server_runtime(async move {
+                points::give(&uid, points).await;
+            });
+        }
+
+        // * Explode
         self.board.zone_lines.clear();
         for y in 0..self.board.size.y {
             for x in 0..self.board.size.x {

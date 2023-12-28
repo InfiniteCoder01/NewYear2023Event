@@ -118,6 +118,7 @@ pub enum BannerMessage {
     CurrentLeader,
     TryYourself,
     TelegramAd,
+    SupportDonate,
 }
 
 struct State {
@@ -211,11 +212,13 @@ pub fn make_bottom_banner(
                 BannerMessage::TimeLeft => BannerMessage::CurrentLeader,
                 BannerMessage::CurrentLeader => BannerMessage::TryYourself,
                 BannerMessage::TryYourself => BannerMessage::TelegramAd,
-                BannerMessage::TelegramAd => BannerMessage::TimeLeft,
+                BannerMessage::TelegramAd => BannerMessage::SupportDonate,
+                BannerMessage::SupportDonate => BannerMessage::TimeLeft,
             }
         }
     }
 
+    context.set_font_size(banner_height - padding * 2.0 - radius * 2.0);
     let message = match state.banner_message {
         BannerMessage::TimeLeft => {
             use hhmmss::Hhmmss;
@@ -232,15 +235,20 @@ pub fn make_bottom_banner(
             )
         }
         BannerMessage::CurrentLeader => format!("Current leader: {}", state.leaderboard[0].1),
-        BannerMessage::TryYourself => "Try yourself at event.infinitecoder.org (Link in description)".to_owned(),
+        BannerMessage::TryYourself => {
+            "Try it yourself at event.infinitecoder.org (Link in description)".to_owned()
+        }
         BannerMessage::TelegramAd => {
             "Follow me on Telegram: https://t.me/InfiniteCoder02".to_owned()
+        }
+        BannerMessage::SupportDonate => {
+            context.set_font_size(((banner_height - padding * 2.0 - radius * 2.0) * 0.6).floor());
+            "If you like this event and want to see more, you can support me on Patreon via StreamElements (Links in description)".to_owned()
         }
     };
 
     if let Some(offset) = text_center_offset(context, &message) {
         context.set_source_rgb(1.0, 1.0, 1.0);
-        context.set_font_size(banner_height - padding * 2.0 - radius * 2.0);
         context.move_to(
             padding + radius,
             y + (banner_height / 2.0).floor() - offset.y,

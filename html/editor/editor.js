@@ -70,25 +70,28 @@ const keybindSchemes = {
 
 const changeKeybinds = (scheme) => {
     editor.setOption("keyboardHandler", keybindSchemes[scheme]);
+    sessionStorage.setItem("keybindScheme", scheme);
 };
 
 const changeLanguage = (language) => {
     editor.session.setMode(languages[language]);
+    sessionStorage.setItem("language", language);
 };
 
-createSelector("theme-selector", themes, theme => changeTheme(editor, theme), "Monokai");
-createSelector("keybinds-selector", keybindSchemes, changeKeybinds, "VSCode");
-createSelector("language-selector", languages, changeLanguage, "JavaScript");
+createSelector("theme-selector", themes, theme => changeTheme(editor, theme), sessionStorage.getItem("theme") || "Monokai");
+createSelector("keybinds-selector", keybindSchemes, changeKeybinds, sessionStorage.getItem("keybindScheme") || "VSCode");
+createSelector("language-selector", languages, changeLanguage, sessionStorage.getItem("language") || "JavaScript");
 
 // Font size
 const setFontSize = (size) => {
-    editor.setOption("fontSize", size);
+    editor.setOption("fontSize", parseInt(size));
+    sessionStorage.setItem("fontSize", size);
 };
 
 let fontSizeInput = $(`input#font-size-input`);
 fontSizeInput.change(fontSizeInput => setFontSize(parseInt(fontSizeInput.target.value)));
-fontSizeInput.val(14);
-setFontSize(14);
+fontSizeInput.val(sessionStorage.getItem("fontSize") || 14);
+setFontSize(sessionStorage.getItem("fontSize") || 14);
 
 // Console
 $("input#console-input").submit(line => {

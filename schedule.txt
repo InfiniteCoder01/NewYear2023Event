@@ -1,3 +1,2 @@
-03.12.2023 13:00:00| target/debug/libtetro.so
-27.12.2023 11:51:00| target/debug/libanimate.so /home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4
-27.12.2023 10:22:00|
+26.12.2023 13:00:00| target/debug/libtetro.so
+31.12.2023 23:59:59|

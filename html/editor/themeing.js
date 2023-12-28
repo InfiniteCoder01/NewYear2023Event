@@ -33,6 +33,7 @@ const changeTheme = (editor, theme) => {
             }
         }
     });
+    sessionStorage.setItem("theme", theme);
 };
 
 export default changeTheme;

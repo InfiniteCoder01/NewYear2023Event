@@ -18,12 +18,6 @@ pub extern "C" fn load(source: &str) {
         routes
     });
 
-    // let background = background.clone();
-    // let source = source.to_owned();
-    // std::thread::spawn(move || {
-    //     background.set_file_source(&source);
-    // });
-
     let file = try_log!("Failed to load media file {:?}: {}", source; std::fs::File::open(source));
     let size = try_log!("Failed to get size of file {:?}: {}", source; file.metadata()).len();
     let reader = std::io::BufReader::new(file);

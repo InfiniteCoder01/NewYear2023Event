@@ -190,6 +190,8 @@ where
             .or(warp::fs::dir(format!("./html/controller/{name}/"))),
     ));
 
+    dbg!(format!("./html/controller/{name}/template/javascript.js"));
+
     let socket = std::sync::Arc::new(socket);
     routes.or(warp::path("connect")
         .and(warp::path(name))
@@ -242,6 +244,14 @@ pub type Color = (f64, f64, f64);
 
 pub fn color_to_u32(color: Color) -> u32 {
     ((color.0 * 255.0) as u32) << 16 | ((color.1 * 255.0) as u32) << 8 | ((color.2 * 255.0) as u32)
+}
+
+pub fn color_from_u32(color: u32) -> Color {
+    (
+        ((color >> 16) & 0xFF) as f64 / 255.0,
+        ((color >> 8) & 0xFF) as f64 / 255.0,
+        (color & 0xFF) as f64 / 255.0,
+    )
 }
 
 pub fn text_center_offset(context: &cairo::Context, text: &str) -> Option<vec2<f64>> {

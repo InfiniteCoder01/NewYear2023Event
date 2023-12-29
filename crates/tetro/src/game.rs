@@ -9,7 +9,7 @@ use tween::Tweener;
 #[derive(Clone, Debug)]
 pub struct Board {
     pub size: vec2<usize>,
-    pub field: BidiVec<Option<(f64, f64, f64)>>,
+    pub field: BidiVec<Option<Color>>,
     pub zone_lines: Vec<Tweener<f64, f64, tween::CubicInOut>>,
 }
 
@@ -22,11 +22,11 @@ impl Board {
         }
     }
 
-    pub fn get(&self, pos: vec2<usize>) -> Option<(f64, f64, f64)> {
+    pub fn get(&self, pos: vec2<usize>) -> Option<Color> {
         self.field.get(pos.x, pos.y).copied().flatten()
     }
 
-    pub fn set(&mut self, pos: vec2<usize>, to: Option<(f64, f64, f64)>) {
+    pub fn set(&mut self, pos: vec2<usize>, to: Option<Color>) {
         if let Some(cell) = self.field.get_mut(pos.x, pos.y) {
             *cell = to;
         }
@@ -36,7 +36,7 @@ impl Board {
         &mut self,
         origin: Option<usize>,
         offset: isize,
-        filler: impl Fn() -> Option<(f64, f64, f64)>,
+        filler: impl Fn() -> Option<Color>,
     ) {
         let origin = origin.unwrap_or(self.size.y - self.zone_lines.len() - 1);
         match offset.cmp(&0) {

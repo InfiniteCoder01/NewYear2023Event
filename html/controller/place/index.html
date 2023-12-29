@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- !META -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.panzoom/4.0.0/panzoom.min.js"
+        integrity="sha512-9P4403el58YclVUmhMst5Bzpcy+i0V0F0wiMlrkTDgmVqYXhF+tccpnhGIHKzKPXKaTF0Q4J9UEhu2i6PckJWg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Controller - Tetris</title>
+</head>
+
+<body>
+    <!-- !NAV -->
+    <div id="buttons" class="buttons" style="position: absolute; left: 10px; right: 10px; top: 52px;">
+    </div>
+    <div id="container" style="position: absolute; left: 10px; right: 10px; top: 106px; bottom: 40px;">
+        <canvas id="display"></canvas>
+    </div>
+    <p class="info" style="position: absolute; left: 10px; bottom: 10px;">
+        Double Click to change a pixel. You can change one pixel every 1 seconds
+    </p>
+
+    <script>
+        let color;
+        $.ajax({
+            dataType: "script",
+            cache: true,
+            url: '/controller/api.js',
+            success: function () {
+                for (const color of palette) {
+                    $("#buttons").append(`<button class="button color-select" style="background-color: #${color};" onclick="color = '${color}';">&nbsp&nbsp</button>`);
+                }
+            }
+        });
+
+        const pixel = 16;
+        const canvas = $("canvas#display")[0];
+        const panzoom = Panzoom(canvas, { canvas: true })
+        canvas.parentElement.addEventListener('wheel', panzoom.zoomWithWheel)
+
+        canvas.ondblclick = function (event) {
+            socket.send(`${Math.floor(event.layerX / pixel)} ${Math.floor(event.layerY / pixel)} ${color}`);
+        };
+
+        let socket;
+        function draw(place) {
+            const context = canvas.getContext("2d");
+            const padding = panzoom.getScale();
+
+            canvas.width = place.width * pixel;
+            canvas.height = place.height * pixel;
+
+            context.fillStyle = "#888888";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < place.height; y++) {
+                for (let x = 0; x < place.width; x++) {
+                    context.fillStyle = `#${place.get({ x, y })}`;
+                    context.fillRect(x * pixel + padding, y * pixel + padding, pixel - padding * 2, pixel - padding * 2);
+                }
+            }
+        }
+
+        requireAuth(() => {
+            socket = new WebSocket(
+                `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/${apiName}/${account.uid}`
+            );
+            socket.onmessage = msg => {
+                if (typeof msg.data === "string") {
+                    if (msg.data.startsWith("!")) {
+                        $("#message").html(`<p style="color: red;">${msg.data.substring(1)}</p>`);
+                    } else {
+                        $("#message").text(msg.data);
+                    }
+                    return;
+                }
+                processMessage(msg, draw);
+            };
+        });
+    </script>
+</body>
+
+</html>

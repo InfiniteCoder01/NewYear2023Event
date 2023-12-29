@@ -2,6 +2,8 @@ import themes from "./themes.js";
 import changeTheme from "./themeing.js";
 import run from "./run.js";
 
+$.ajax({ dataType: "script", cache: true, url: '/controller/api.js' });
+
 requireAuth(() => loadCode());
 
 const createSelector = (id, data, callback, defaultValue) => {
@@ -115,18 +117,18 @@ $(document).keydown(function (event) {
 });
 
 function saveCode() {
-    db.collection("users").doc(`${account.uid}/code/${editor.session.getMode().$id.split('/').pop()}`).set({
-        text: editor.getValue(),
+    db.collection("users").doc(`${account.uid}/code/${apiName}`).set({
+        code: editor.getValue(),
     }).catch(function (error) {
         window.error("Error saving code: ", error);
     });
 }
 
 function loadCode() {
-    db.collection("users").doc(`${account.uid}/code/${editor.session.getMode().$id.split('/').pop()}`).get()
+    db.collection("users").doc(`${account.uid}/code/${apiName}`).get()
         .then(function (doc) {
             if (doc.exists) {
-                editor.setValue(doc.data().text);
+                editor.setValue(doc.data().code);
             } else {
                 const templates = {
                     "ace/mode/javascript": "javascript.js",

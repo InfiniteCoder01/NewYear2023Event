@@ -1,0 +1,21 @@
+[package]
+name = "place"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+log = { version = "0.4.20", features = ["std"] }
+
+scheduler = { path = "../scheduler" }
+points = { path = "../points" }
+bidivec = "0.1.0"
+
+cairo-rs = "0.18.3"
+soloud = "1.0.5"
+
+warp = "0.3.6"
+futures-util = "0.3.29"
+tokio = "1.34.0"

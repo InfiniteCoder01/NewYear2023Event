@@ -60,7 +60,7 @@ const run = (code, language) => {
     // }
 
     if (worker) worker.terminate();
-    worker = new Worker("editor/worker.js");
+    worker = new Worker("/editor/worker.js");
     worker.onmessage = message => {
         if (message.data.error != null) error(message.data.error);
         else print(message.data);

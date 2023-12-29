@@ -118,6 +118,7 @@ pub enum BannerMessage {
     CurrentLeader,
     TryYourself,
     TelegramAd,
+    YoutubeAd,
     SupportDonate,
 }
 
@@ -212,7 +213,8 @@ pub fn make_bottom_banner(
                 BannerMessage::TimeLeft => BannerMessage::CurrentLeader,
                 BannerMessage::CurrentLeader => BannerMessage::TryYourself,
                 BannerMessage::TryYourself => BannerMessage::TelegramAd,
-                BannerMessage::TelegramAd => BannerMessage::SupportDonate,
+                BannerMessage::TelegramAd => BannerMessage::YoutubeAd,
+                BannerMessage::YoutubeAd => BannerMessage::SupportDonate,
                 BannerMessage::SupportDonate => BannerMessage::TimeLeft,
             }
         }
@@ -241,9 +243,12 @@ pub fn make_bottom_banner(
         BannerMessage::TelegramAd => {
             "Follow me on Telegram: https://t.me/InfiniteCoder02".to_owned()
         }
+        BannerMessage::YoutubeAd => {
+            "If you like the event, subscribe and press the like button!".to_owned()
+        }
         BannerMessage::SupportDonate => {
             context.set_font_size(((banner_height - padding * 2.0 - radius * 2.0) * 0.6).floor());
-            "If you like this event and want to see more, you can support me on Patreon via StreamElements (Links in description)".to_owned()
+            "If you like this event and want to see more, you can support me on Patreon or via StreamElements (Links in description)".to_owned()
         }
     };
 

@@ -11,7 +11,7 @@
 // SlowFall - Makes tetromino fall at normal speed if there was FastFall before. Note, that the speed doesn't reset after tetromino gets placed.
 
 // Pro tip: you can monitor your bot in near-realtime in controller.
-// Just press a gamepad button on the title bar!
+// Just press a gamepad button on the navigation bar!
 
 // Scoring function, used to test every possible move
 function scoreFunction(game) {

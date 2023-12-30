@@ -173,6 +173,7 @@ fn main() {
                         width,
                         height,
                         next.map_or(Duration::zero(), |next| next.timestamp - Local::now()),
+                        next.map_or(true, |next| next.path.is_empty()),
                     )
                 } {
                     plugin = next.and_then(|next| {

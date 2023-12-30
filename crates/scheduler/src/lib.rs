@@ -15,6 +15,7 @@ pub type PluginFrame = unsafe extern "C" fn(
     f64,
     f64,
     Duration,
+    bool,
 ) -> bool;
 
 #[allow(improper_ctypes_definitions)]
@@ -189,8 +190,6 @@ where
             })
             .or(warp::fs::dir(format!("./html/controller/{name}/"))),
     ));
-
-    dbg!(format!("./html/controller/{name}/template/javascript.js"));
 
     let socket = std::sync::Arc::new(socket);
     routes.or(warp::path("connect")

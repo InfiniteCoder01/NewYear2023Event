@@ -135,10 +135,12 @@ pub extern "C" fn frame(
     width: f64,
     height: f64,
     time_left: Duration,
+    last_event: bool,
 ) -> bool {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
-    let height = height - points::make_bottom_banner(&context, width, height, time_left);
+    let height =
+        height - points::make_bottom_banner(&context, width, height, time_left, last_event);
 
     if state.image.width() != WIDTH || state.image.height() != HEIGHT {
         state.image.resize(WIDTH, HEIGHT, Pixel::blank());
@@ -200,8 +202,7 @@ async fn socket(uid: String, websocket: warp::filters::ws::WebSocket) {
                                     let mut state = STATE.lock().unwrap();
                                     let state = state.as_mut().unwrap();
                                     if let Some(timeout) = state.timeouts.get(&uid) {
-                                        if timeout.elapsed()
-                                            > std::time::Duration::from_millis(950)
+                                        if timeout.elapsed() > std::time::Duration::from_millis(950)
                                         {
                                             state
                                                 .timeouts

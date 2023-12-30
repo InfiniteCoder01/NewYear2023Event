@@ -174,6 +174,7 @@ pub fn make_bottom_banner(
     width: f64,
     height: f64,
     time_left: Duration,
+    last_event: bool,
 ) -> f64 {
     let padding = 10.0;
     let radius = 10.0;
@@ -227,14 +228,16 @@ pub fn make_bottom_banner(
 
             let days = time_left.num_days();
             let hhmmss = time_left - Duration::days(days);
-            format!(
-                "Time left to the next event: {}",
-                if days > 0 {
-                    format!("{} days and {}", days, hhmmss.hhmmss())
-                } else {
-                    hhmmss.hhmmss()
-                }
-            )
+            let time_left = if days > 0 {
+                format!("{} days and {}", days, hhmmss.hhmmss())
+            } else {
+                hhmmss.hhmmss()
+            };
+            if last_event {
+                format!("Time left to the end: {time_left}")
+            } else {
+                format!("Time left to the next event: {time_left}")
+            }
         }
         BannerMessage::CurrentLeader => format!("Current leader: {}", state.leaderboard[0].1),
         BannerMessage::TryYourself => {

@@ -39,6 +39,7 @@ pub extern "C" fn frame(
     _width: f64,
     _height: f64,
     time_left: Duration,
+    _: bool,
 ) -> bool {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();

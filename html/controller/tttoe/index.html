@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- !META -->
+    <title>Controller - Tetris</title>
+</head>
+
+<body>
+    <!-- !NAV -->
+    <p id="message" class="info has-text-centered is-size-3"
+        style="position: absolute; left: 10px; right: 10px; top: 52px;"></p>
+    <div id="container" style="position: absolute; left: 10px; right: 10px; top: 106px; bottom: 40px;">
+        <canvas id="display"></canvas>
+    </div>
+    <p class="info" style="position: absolute; left: 10px; bottom: 10px;">
+        AD/Arrows - Move, QE - Turn, D/Down Arrow - Fast Fall/Drop, W/Up Arrow - Zone
+    </p>
+
+    <script>
+        $.ajax({ dataType: "script", cache: true, url: '/controller/api.js' });
+
+        function drawTag(tag, context, offset, tile) {
+            const padding = tile / 8;
+            offset[0] += padding;
+            offset[1] += padding;
+            tile -= padding * 2;
+
+            context.beginPath();
+            if (tag == 1) {
+                context.strokeStyle = "#ff0000";
+                context.moveTo(offset[0], offset[1]);
+                context.lineTo(offset[0] + tile, offset[1] + tile);
+                context.moveTo(offset[0] + tile, offset[1]);
+                context.lineTo(offset[0], offset[1] + tile);
+            } else if (tag == 2) {
+                context.strokeStyle = "#00ff00";
+                context.arc(
+                    offset[0] + tile / 2,
+                    offset[1] + tile / 2,
+                    tile / 2,
+                    0.0,
+                    2.0 * Math.PI,
+                );
+            }
+            else if (tag == 3) {
+                context.strokeStyle = "#0000ff";
+                context.moveTo(offset[0], offset[1] + tile);
+                context.lineTo(offset[0] + tile, offset[1] + tile);
+                context.lineTo(offset[0] + tile / 2, offset[1]);
+                context.closePath();
+            } else if (tag == 4) {
+                context.strokeStyle = "#ffff00";
+                context.moveTo(offset[0] + tile / 2, offset[1]);
+                context.lineTo(offset[0] + tile, offset[1] + tile / 2);
+                context.lineTo(offset[0] + tile / 2, offset[1] + tile);
+                context.lineTo(offset[0], offset[1] + tile / 2);
+                context.closePath();
+            }
+            context.stroke();
+        }
+
+        let socket;
+        requireAuth(() => {
+            socket = new WebSocket(
+                `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${document.location.host}/connect/${apiName}/${account.uid}`
+            );
+            socket.onmessage = msg => {
+                if (typeof msg.data === "string") {
+                    if (msg.data.startsWith("!")) {
+                        $("#message").html(`<p style="color: red;">${msg.data.substring(1)}</p>`);
+                    } else {
+                        $("#message").text(msg.data);
+                    }
+                    return;
+                }
+                processMessage(msg, game => {
+                    const container = $("#container");
+                    const canvas = $("canvas#display")[0];
+                    canvas.width = container.width();
+                    canvas.height = container.height();
+                    const context = canvas.getContext("2d");
+
+                    const [width, height] = [game.width, game.height]
+
+                    const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
+                    const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
+
+                    canvas.onclick = function (event) {
+                        const [x, y] = [Math.floor((event.layerX - offset[0]) / tile), Math.floor((event.layerY - offset[1]) / tile)];
+                        socket.send(`${x} ${y}`);
+                    };
+
+                    context.fillStyle = "black";
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+
+                    context.strokeStyle = "white";
+                    context.lineWidth = 5;
+                    context.strokeRect(offset[0], offset[1], width * tile, height * tile);
+
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            context.strokeStyle = "white";
+                            context.strokeRect(offset[0] + x * tile, offset[1] + y * tile, tile, tile);
+
+                            const tag = game.get({ x, y });
+                            if (tag != 0) {
+                                drawTag(tag, context, [offset[0] + x * tile, offset[1] + y * tile], tile);
+                            }
+                        }
+                    }
+
+                    for (const [pos, dir] of game.lines) {
+                        const padding = tile / 8;
+                        context.strokeStyle = "white";
+                        const p1 = [
+                            offset[0] + pos[0] * tile + tile / 2 - dir[0] * (tile / 2 - padding),
+                            offset[1] + pos[1] * tile + tile / 2 - dir[1] * (tile / 2 - padding),
+                        ];
+                        const p2 = [
+                            p1[0] + dir[0] * 4 * tile - dir[0] * padding * 2,
+                            p1[1] + dir[1] * 4 * tile - dir[1] * padding * 2,
+                        ];
+                        context.beginPath();
+                        context.moveTo(p1[0], p1[1]);
+                        context.lineTo(p2[0], p2[1]);
+                        context.stroke();
+                    }
+
+                    // context.font = `${Math.trunc(tile)}px serif`;
+                    // context.fillStyle = "white";
+                    // context.fillText(game.points,
+                    //     zonePos[0] - context.measureText(game.points).width / 2.0,
+                    //     zonePos[1] + tile * 2.5);
+                });
+            };
+        });
+    </script>
+</body>
+
+</html>

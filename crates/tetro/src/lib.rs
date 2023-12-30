@@ -3,7 +3,6 @@ pub mod tetromino;
 
 use crate::game::Game;
 use batbox_la::*;
-use points::make_bottom_banner;
 use scheduler::*;
 use tween::Tweener;
 use warp::filters::ws::{Message, WebSocket};
@@ -58,6 +57,7 @@ pub extern "C" fn frame(
     width: f64,
     height: f64,
     time_left: Duration,
+    last_event: bool,
 ) -> bool {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
@@ -70,7 +70,8 @@ pub extern "C" fn frame(
         cairo::FontWeight::Normal,
     );
 
-    let height = height - make_bottom_banner(&context, width, height, time_left);
+    let height =
+        height - points::make_bottom_banner(&context, width, height, time_left, last_event);
 
     if let (Some(vs_screen), Some([game1, game2])) = (&mut state.vs_screen, &state.game) {
         let player1 = vec2(

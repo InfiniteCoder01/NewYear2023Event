@@ -1,3 +1,4 @@
 26.12.2023 13:00:00| target/debug/libtetro.so
 29.12.2023 12:00:00| target/debug/libplace.so
+29.12.2023 13:00:00| target/debug/libtttoe.so
 31.12.2023 23:59:59|

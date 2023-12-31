@@ -2,8 +2,8 @@ use bidivec::BidiVec;
 use scheduler::*;
 use std::{collections::HashMap, path::Path, sync::Mutex, time::Instant};
 
-const WIDTH: usize = 128;
-const HEIGHT: usize = 128;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 64;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pixel {

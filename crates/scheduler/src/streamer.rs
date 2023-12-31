@@ -57,13 +57,15 @@ pub fn stream<F>(
     let mut pipeline = format!(
         // file_demux. ! audioconvert ! audioresample ! pulsesink
         // location="/home/infinitecoder/Downloads/file_example_MP4_1280_10MG.mp4"
+
+        // file_demux.src_1 ! audioconvert ! audioresample ! pulsesink
         r#"
-            videotestsrc pattern=black ! video_switch.sink_0
+        videotestsrc pattern=black ! video_switch.sink_0
 
-            bin (name=file_bin
+        bin (name=file_bin
+                filesrc name=file_src ! decodebin name=file_demux
                 file_demux. ! audioconvert ! audioresample ! pulsesink
-
-                filesrc name=file_src ! decodebin name=file_demux ! {videoconvert}
+                file_demux. ! {videoconvert} ! videoscale ! queue
             ) ! video_switch.sink_1
 
             input-selector name=video_switch !

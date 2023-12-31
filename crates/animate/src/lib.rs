@@ -43,7 +43,7 @@ pub extern "C" fn frame(
 ) -> bool {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
-    if !state.started && time_left < state.duration - Duration::milliseconds(500) {
+    if !state.started && time_left < state.duration - Duration::milliseconds(200) {
         let source = state.source.clone();
         let background = background.clone();
         std::thread::spawn(move || {

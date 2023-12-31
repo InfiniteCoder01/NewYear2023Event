@@ -42,7 +42,6 @@
             const rect = canvas.getBoundingClientRect()
             const x = event.clientX - rect.left
             const y = event.clientY - rect.top
-            console.log(`${Math.floor(x / pixel / panzoom.getScale())} ${Math.floor(y / pixel / panzoom.getScale())} ${color}`);
             socket.send(`${Math.floor(x / pixel / panzoom.getScale())} ${Math.floor(y / pixel / panzoom.getScale())} ${color}`);
         };
 

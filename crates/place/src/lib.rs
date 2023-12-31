@@ -3,7 +3,7 @@ use scheduler::*;
 use std::{collections::HashMap, path::Path, sync::Mutex, time::Instant};
 
 const WIDTH: usize = 64;
-const HEIGHT: usize = 64;
+const HEIGHT: usize = 32;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Pixel {

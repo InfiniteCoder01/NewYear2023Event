@@ -25,7 +25,7 @@ pub extern "C" fn load(_: &str) {
             queue::make_queue(
                 PLAYERS,
                 50,
-                Some(std::time::Duration::from_secs(3 /*0*/)),
+                Some(std::time::Duration::from_secs(10)),
                 &socket,
             ),
             points::make_leaderboard_server(),

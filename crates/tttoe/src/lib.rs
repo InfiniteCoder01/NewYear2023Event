@@ -176,7 +176,7 @@ fn socket(
                 if let Some(game) = &state.game {
                     if let Some(my_turn) = game.players.iter().position(|player| player.uid == uid)
                     {
-                        let mut message = game.build_message();
+                        let mut message = game.build_message(&uid);
                         message.push((game.turn == my_turn) as u8);
                         (Message::binary(message), game.turn == my_turn)
                     } else {

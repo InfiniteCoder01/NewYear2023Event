@@ -274,7 +274,19 @@ impl Game {
             }
         }
 
-        !self.board.iter().all(|tile| tile.is_some())
+        if self.board.iter().all(|tile| tile.is_some()) {
+            for player in &mut self.players {
+                if player.uid != "AI" {
+                    let uid = player.uid.clone();
+                    let score = player.score;
+                    spawn_in_server_runtime(async move {
+                        points::give(&uid, score as _).await;
+                    });
+                }
+            }
+
+            false
+        }else{true}
     }
 
     fn check(&self, pos: vec2<usize>, dir: vec2<isize>, stride: usize) -> Option<Tag> {
@@ -323,7 +335,7 @@ impl Game {
         }
     }
 
-    pub fn build_message(&self) -> Vec<u8> {
+    pub fn build_message(&self, uid: &str) -> Vec<u8> {
         let mut message = Vec::new();
         message.extend_from_slice(&(self.board.width() as u32).to_le_bytes());
         message.extend_from_slice(&(self.board.height() as u32).to_le_bytes());
@@ -338,12 +350,9 @@ impl Game {
             message.extend_from_slice(&(line.1.y as i8).to_le_bytes());
         }
 
-        message.extend_from_slice(&(self.players.len() as u32).to_le_bytes());
-        for player in &self.players {
+        if let Some(player) = self.players.iter().find(|player| player.uid == uid) {
             message.push(player.tag.encode());
-            // message.push(player.name.);
-            // message.extend_from_slice(&(line.1.x as i8).to_le_bytes());
-            // message.extend_from_slice(&(line.1.y as i8).to_le_bytes());
+            message.extend_from_slice(&(player.score as u32).to_le_bytes());
         }
 
         message

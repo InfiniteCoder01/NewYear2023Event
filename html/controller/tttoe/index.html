@@ -83,8 +83,8 @@
 
                     const [width, height] = [game.width, game.height]
 
-                    const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / height);
-                    const offset = [(canvas.width - width * tile) / 2, (canvas.height - height * tile) / 2];
+                    const tile = Math.min((canvas.width - 40) / width, (canvas.height - 40) / (height + 0.5));
+                    const offset = [(canvas.width - width * tile) / 2, (canvas.height - (height + 0.5) * tile) / 2 + tile * 0.5];
 
                     canvas.onclick = function (event) {
                         const [x, y] = [Math.floor((event.layerX - offset[0]) / tile), Math.floor((event.layerY - offset[1]) / tile)];
@@ -127,11 +127,11 @@
                         context.stroke();
                     }
 
-                    // context.font = `${Math.trunc(tile)}px serif`;
-                    // context.fillStyle = "white";
-                    // context.fillText(game.points,
-                    //     zonePos[0] - context.measureText(game.points).width / 2.0,
-                    //     zonePos[1] + tile * 2.5);
+                    drawTag(game.tag, context, [offset[0], offset[1] - tile / 2], tile / 2 * 0.9);
+
+                    context.font = `${Math.trunc(tile / 2)}px serif`;
+                    context.fillStyle = "white";
+                    context.fillText(game.score, offset[0] + tile / 2, offset[1] - tile * 0.1);
                 });
             };
         });

@@ -23,10 +23,16 @@ const processMessage = (msg, callback) => {
             return [[x, y], [dx, dy]];
         });
 
+        const tag = data.getUint8(cursor);
+        cursor++;
+        const score = data.getUint32(cursor, true);
+        cursor += 4;
+
         const my_turn = data.getUint8(cursor);
 
         callback({
-            width, height, board, my_turn, lines,
+            width, height, board, lines,
+            tag, score, my_turn,
 
             get: function ({ x, y }) {
                 if (x < 0 || x >= this.width || y < 0 || y >= this.height) {

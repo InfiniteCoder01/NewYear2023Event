@@ -150,10 +150,11 @@ pub extern "C" fn frame(
         .min(height / state.image.height() as f64)
         .floor();
     let offset = (
-        (width - state.image.width() as f64 * pixel_size) / 2.0,
-        (height - state.image.height() as f64 * pixel_size) / 2.0,
+        ((width - state.image.width() as f64 * pixel_size) / 2.0).floor(),
+        ((height - state.image.height() as f64 * pixel_size) / 2.0).floor(),
     );
 
+    let render_start = Instant::now();
     for (index, pixel) in state.image.iter().enumerate() {
         let (x, y) = (index % state.image.width(), index / state.image.width());
         let x = x as f64 * pixel_size + offset.0;
@@ -162,6 +163,7 @@ pub extern "C" fn frame(
         context.rectangle(x, y, pixel_size, pixel_size);
         log_error!("{}"; context.fill());
     }
+    println!("Rendered {} pixels in {}ms", state.image.width() * state.image.height(), render_start.elapsed().as_millis());
 
     if state.save_timeout.elapsed() > std::time::Duration::from_secs(60)
         || time_left <= Duration::zero()
